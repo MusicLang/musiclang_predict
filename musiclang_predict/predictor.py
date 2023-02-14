@@ -1,4 +1,6 @@
 from musiclang import Score
+from .sample import ModelLLM
+
 
 class MusicLangPredictor:
     CHORD_SEP = ")+ \n("
@@ -9,7 +11,8 @@ class MusicLangPredictor:
 
     @classmethod
     def load_model(cls, name=None, path=None, update=False, **config):
-        pass
+        model = ModelLLM.load_model(name=name, path=path, update=update, **config)
+        return MusicLangPredictor(model)
 
 
     def predict(self, score, nb_chords=1, **config):
