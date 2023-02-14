@@ -29,12 +29,12 @@ class MusicLangPredictor:
 
         score = score.to_score()
         if len(score.chords) > 0:
-            last_chord_duration = len(str(score[-1]))
+            last_chord_duration = min(200, len(str(score[-1])))
         else:
-            last_chord_duration = 100
+            last_chord_duration = 200
 
         score_str = str(score)
-        samples = self.model.sample(start=score_str, max_new_tokens=last_chord_duration, num_samples=1, **config)[0]
+        samples = self.model.sample(start=score_str, num_samples=1, **config)[0]
 
         prediction = self.CHORD_SEP.join(samples.split(self.CHORD_SEP)[:-1]) + self.CHORD_SEP
 
