@@ -72,6 +72,7 @@ class ModelLLM:
 
         # look for the meta pickle in case it is available in the dataset folder
         load_meta = False
+        from pdb import set_trace; set_trace()
         if init_from == 'resume' and 'config' in checkpoint and 'dataset' in checkpoint['config']: # older checkpoints might not have these...
             meta_path = os.path.join(out_dir, 'meta.pkl')
             load_meta = os.path.exists(meta_path)
