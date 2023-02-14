@@ -148,7 +148,7 @@ def train(out_dir='out', eval_interval=2000, log_interval=1, eval_iters=200, eva
     import shutil
     if meta_path != os.path.join(out_dir, 'meta.pkl'):
         shutil.copy(meta_path, os.path.join(out_dir, 'meta.pkl'))
-        
+
     meta_vocab_size = None
     if os.path.exists(meta_path):
         with open(meta_path, 'rb') as f:
