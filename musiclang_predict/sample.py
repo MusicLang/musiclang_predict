@@ -72,11 +72,8 @@ class ModelLLM:
 
         # look for the meta pickle in case it is available in the dataset folder
         load_meta = False
-        from pdb import set_trace;
-        set_trace()
         if init_from == 'resume' and 'config' in checkpoint and 'dataset' in checkpoint['config']: # older checkpoints might not have these...
             meta_path = os.path.join(out_dir, 'meta.pkl')
-
             load_meta = os.path.exists(meta_path)
         if load_meta:
             print(f"Loading meta from {meta_path}...")
@@ -111,7 +108,8 @@ class ModelLLM:
         """
         seed = config.get('seed', 1337)
         torch.manual_seed(seed)
-        torch.cuda.manual_seed(seed)
+        if self.device == 'cuda':
+            torch.cuda.manual_seed(seed)
         max_new_tokens = config.get('max_new_tokens', 300)  # number of tokens generated in each sample
         temperature = config.get('temperature',
                                  0.8)  # 1.0 = no change, < 1.0 = less random, > 1.0 = more random, in predictions
