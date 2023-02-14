@@ -35,9 +35,11 @@ class MusicLangPredictor:
 
         prediction = self.CHORD_SEP.join(samples.split(self.CHORD_SEP)[:-1])
 
+        target_nb_chords = (nb_chords + nb_chords_current)
         new_score = Score.from_str(prediction)
-        new_score = new_score[:nb_chords + nb_chords_current]
-        if len(new_score.chords) < nb_chords + nb_chords_current:
-            return self.predict(new_score, nb_chords=len(new_score.chords) - nb_chords_current, **config)
+        new_score = new_score[:target_nb_chords]
+        new_len_chord = len(new_score.chords)
+        if new_len_chord < target_nb_chords:
+            return self.predict(new_score, nb_chords=target_nb_chords - new_len_chord, **config)
         else:
             return new_score
