@@ -104,8 +104,8 @@ class ModelLLM:
         """
         seed = config.get('seed', 1337)
         torch.manual_seed(seed)
-        # if self.device == 'cuda':
-        #     torch.cuda.manual_seed(seed)
+        if self.device == 'cuda':
+            torch.cuda.manual_seed(seed)
         max_new_tokens = config.get('max_new_tokens', 300)  # number of tokens generated in each sample
         temperature = config.get('temperature',
                                  0.8)  # 1.0 = no change, < 1.0 = less random, > 1.0 = more random, in predictions
