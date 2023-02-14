@@ -25,19 +25,18 @@ class MusicLangPredictor:
         """
 
         if isinstance(score, str):
-            score = Score.from_str(score).to_score()  # Normalize the score
+            raise NotImplemented('Strings are not supported yet')
 
         score = score.to_score()
-        if len(score.chords) > 0:
-            last_chord_duration = min(200, len(str(score[-1])))
-        else:
-            last_chord_duration = 200
+        nb_chords_current = len(score.chords)
 
         score_str = str(score)
         samples = self.model.sample(start=score_str, num_samples=1, **config)[0]
 
         prediction = self.CHORD_SEP.join(samples.split(self.CHORD_SEP)[:-1])
 
-        return Score.from_str(prediction)
-        # Find chords
-        # Remove last chord
+        new_score = Score.from_str(prediction)
+        new_score = new_score[:nb_chords + nb_chords_current]
+        if len(new_score.chords) < nb_chords + nb_chords_current:
+            return self.predict(new_score, nb_chords=nb_chords - nb_chords_current, **config)
+
