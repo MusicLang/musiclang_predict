@@ -7,11 +7,10 @@ import numpy as np
 def join_directory(data_folder, output_directory, sep=';'):
     filenames = [os.path.join(data_folder, f) for f in os.listdir(data_folder)]
     output_dataset = os.path.join(output_directory, 'data.txt')
-    if not os.path.exists(output_dataset):
-        with open(output_dataset, 'w') as outfile:
-            for fname in filenames:
-                with open(fname) as infile:
-                    outfile.write(infile.read() + f"{sep}\n")
+    with open(output_dataset, 'w') as outfile:
+        for fname in filenames:
+            with open(fname) as infile:
+                outfile.write(infile.read() + f"{sep}\n")
 
     return output_dataset
 
