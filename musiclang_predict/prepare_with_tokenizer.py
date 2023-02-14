@@ -4,18 +4,16 @@ from tokenizers.trainers import BpeTrainer
 import os
 import numpy as np
 import pickle
+from tokenizers.pre_tokenizers import Whitespace
 
 
 def train_tokenizer(files, output_tokenizer, vocab_size):
     tokenizer = Tokenizer(BPE(unk_token="[UNK]"))
-    trainer = BpeTrainer(special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"], vocab_size=vocab_size)
+    tokenizer.pre_tokenizer = Whitespace()
+    trainer = BpeTrainer(special_tokens=["[UNK]", "[MASK]"], vocab_size=vocab_size)
     tokenizer.train(files, trainer)
     tokenizer.save(os.path.join(output_tokenizer, "tokenizer.json"))
     return tokenizer
-
-
-def load_tokenizer(directory):
-    tokenizer = Tokenizer.from_file(os.path.join(directory, "tokenizer.json"))
 
 
 def encode_data(tokenizer, file):
