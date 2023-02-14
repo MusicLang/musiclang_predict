@@ -11,4 +11,5 @@ class MusicLangBasicTrainer:
         base_config.update(**config)
         base_config.update(out_dir=out_dir)
         base_config.update(dataset=dataset_dir)
-        train(base_config)
+
+        train(**base_config)
