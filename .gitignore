@@ -1,0 +1,7 @@
+.idea/
+*.bin
+*.pkl
+*.pt
+venv/
+__pycache__/
+.DS_Store

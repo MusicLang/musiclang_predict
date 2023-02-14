@@ -1,0 +1,10 @@
+torch
+numpy
+transformers
+datasets
+tiktoken
+wandb
+tqdm
+musiclang
+gdown
+gitpython
