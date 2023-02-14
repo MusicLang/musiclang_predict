@@ -32,6 +32,17 @@ print(samples[0])
 ```
 It will displays a musiclang score : "(I % I.M)(\n\tpiano__0=s0, \n\tpiano__1=s2, \n\tpiano__2=s4)+ \n(V['65'] % I.M)( ...
 
+
+You can also load a model from a folder url : 
+
+```python
+from musiclang_predict.sample import ModelLLM
+model = ModelLLM.load_model(path='/path/to/my/model')
+samples = model.sample(start='(I % I.M', num_samples=1, temperature=0.8)
+print(samples[0])
+```
+
+
 Colab example
 --------------
 

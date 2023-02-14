@@ -28,10 +28,12 @@ class ModelLLM:
         """
         if name is None and path is None:
             raise ValueError('One of "name" or "path" paremeter should not be empty')
+        if name is not None and path is not None:
+            raise ValueError('Only one of "name" or "path" should not be None')
 
         if name is not None:
             from .load_dataset import download_model
-            out_dir = download_model(name, update=update, **config)
+            out_dir = download_model(name=name, update=update, **config)
         else:
             out_dir = path
 
@@ -107,7 +109,7 @@ class ModelLLM:
         seed = config.get('seed', 1337)
         torch.manual_seed(seed)
         torch.cuda.manual_seed(seed)
-        max_new_tokens = config.get('max_new_tokens', 3000)  # number of tokens generated in each sample
+        max_new_tokens = config.get('max_new_tokens', 300)  # number of tokens generated in each sample
         temperature = config.get('temperature',
                                  0.8)  # 1.0 = no change, < 1.0 = less random, > 1.0 = more random, in predictions
         top_k = config.get('top_k', 200)  # retain only the top_k most likely tokens, clamp others to have 0 probability
