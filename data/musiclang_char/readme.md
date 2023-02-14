@@ -1,7 +1,7 @@
 
 # tiny musiclang, character-level
 
-Tiny musiclang, treated on character-level.
+Tiny musiclang, treated character-level.
 
 After running `prepare.py`:
 

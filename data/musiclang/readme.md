@@ -1,9 +1,9 @@
 
-# tiny shakespeare
+# tiny musiclang, character-level
 
-Tiny shakespeare, of the good old char-rnn fame :)
+Tiny musiclang, treated character-level.
 
 After running `prepare.py`:
 
-- train.bin has 301,966 tokens
-- val.bin has 36,059 tokens
+- train.bin has 1,003,854 tokens
+- val.bin has 111,540 tokens
