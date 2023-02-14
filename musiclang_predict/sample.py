@@ -72,8 +72,7 @@ class ModelLLM:
 
         # look for the meta pickle in case it is available in the dataset folder
         load_meta = False
-        from pdb import set_trace; set_trace()
-        if init_from == 'resume' and 'config' in checkpoint and 'dataset' in checkpoint['config']: # older checkpoints might not have these...
+        if init_from == 'resume':
             meta_path = os.path.join(out_dir, 'meta.pkl')
             load_meta = os.path.exists(meta_path)
         if load_meta:
@@ -85,11 +84,7 @@ class ModelLLM:
             encode = lambda s: [stoi[c] for c in s]
             decode = lambda l: ''.join([itos[i] for i in l])
         else:
-            # ok let's assume gpt-2 encodings by default
-            print("No meta.pkl found, assuming GPT-2 encodings...")
-            enc = tiktoken.get_encoding("gpt2")
-            encode = lambda s: enc.encode(s, allowed_special={"<|endoftext|>"})
-            decode = lambda l: enc.decode(l)
+            raise Exception('No encoding found (no meta.pkl in the directory)')
 
         return ModelLLM(model, encode, decode, ctx, device)
 
