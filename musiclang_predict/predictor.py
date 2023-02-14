@@ -38,6 +38,6 @@ class MusicLangPredictor:
 
         prediction = self.CHORD_SEP.join(samples.split(self.CHORD_SEP)[:-1])
 
-        return prediction
+        return Score.from_str(prediction)
         # Find chords
         # Remove last chord
