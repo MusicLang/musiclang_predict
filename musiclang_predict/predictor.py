@@ -34,7 +34,7 @@ class MusicLangPredictor:
             last_chord_duration = 100
 
         score_str = str(score)
-        samples = self.model.sample(self, start=score, max_new_tokens=last_chord_duration, num_samples=1, **config)[0]
+        samples = self.model.sample(start=score_str, max_new_tokens=last_chord_duration, num_samples=1, **config)[0]
 
         prediction = self.CHORD_SEP.join(samples.split(self.CHORD_SEP)[:-1]) + self.CHORD_SEP
 
