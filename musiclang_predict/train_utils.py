@@ -122,7 +122,7 @@ def train(out_dir='out', eval_interval=2000, log_interval=1, eval_iters=200, eva
     ctx = nullcontext() if device_type == 'cpu' else torch.amp.autocast(device_type=device_type, dtype=ptdtype)
 
     # poor man's data loader
-    data_dir = os.path.join('data', dataset)
+    data_dir = dataset
     train_data = np.memmap(os.path.join(data_dir, 'train.bin'), dtype=np.uint16, mode='r')
     val_data = np.memmap(os.path.join(data_dir, 'val.bin'), dtype=np.uint16, mode='r')
 
