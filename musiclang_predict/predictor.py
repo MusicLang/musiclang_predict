@@ -38,5 +38,6 @@ class MusicLangPredictor:
         new_score = Score.from_str(prediction)
         new_score = new_score[:nb_chords + nb_chords_current]
         if len(new_score.chords) < nb_chords + nb_chords_current:
-            return self.predict(new_score, nb_chords=nb_chords - nb_chords_current, **config)
-
+            return self.predict(new_score, nb_chords=len(new_score.chords) - nb_chords_current, **config)
+        else:
+            return new_score
