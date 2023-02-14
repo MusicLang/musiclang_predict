@@ -36,6 +36,7 @@ class MusicLangPredictor:
         score_str = score_str.replace('\t', '')
 
         samples = self.model.sample(start=score_str, num_samples=1, **config)[0]
+
         samples = samples.replace(';', '+')
         samples = samples.replace(' ', '')
         prediction = self.CHORD_SEP.join(samples.split(self.CHORD_SEP)[:-1])
