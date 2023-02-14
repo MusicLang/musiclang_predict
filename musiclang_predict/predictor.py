@@ -3,7 +3,7 @@ from .sample import ModelLLM
 
 
 class MusicLangPredictor:
-    CHORD_SEP = ")+ \n("
+    CHORD_SEP = "+ \n("
 
     def __init__(self, model):
         self.model = model
@@ -36,7 +36,7 @@ class MusicLangPredictor:
         score_str = str(score)
         samples = self.model.sample(start=score_str, num_samples=1, **config)[0]
 
-        prediction = self.CHORD_SEP.join(samples.split(self.CHORD_SEP)[:-1]) + self.CHORD_SEP
+        prediction = self.CHORD_SEP.join(samples.split(self.CHORD_SEP)[:-1])
 
         return prediction
         # Find chords
