@@ -3,18 +3,19 @@ import pickle
 import numpy as np
 
 
-
 def join_directory(data_folder, output_directory, sep=';'):
     filenames = [os.path.join(data_folder, f) for f in os.listdir(data_folder)]
     output_dataset = os.path.join(output_directory, 'data.txt')
     with open(output_dataset, 'w') as outfile:
         for fname in filenames:
             with open(fname) as infile:
-                outfile.write(infile.read() + f"{sep}\n")
+                data = infile.read() + f"{sep}\n"
+                data = data.replace(' ', '')
+                data = data.replace('\n', '')
+                data = data.replace('\t', '')
+                outfile.write(data)
 
     return output_dataset
-
-
 
 
 def prepare_dataset(data_folder, output_directory, sep=';'):

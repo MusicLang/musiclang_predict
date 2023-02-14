@@ -3,7 +3,7 @@ from .sample import ModelLLM
 
 
 class MusicLangPredictor:
-    CHORD_SEP = "+ \n("
+    CHORD_SEP = "+("
 
     def __init__(self, model):
         self.model = model

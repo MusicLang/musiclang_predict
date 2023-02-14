@@ -5,7 +5,7 @@ import os
 import numpy as np
 import pickle
 from tokenizers.pre_tokenizers import Whitespace
-
+from .prepare import join_directory
 
 def train_tokenizer(files, output_tokenizer, vocab_size):
     tokenizer = Tokenizer(BPE(unk_token="[UNK]"))
@@ -21,15 +21,6 @@ def encode_data(tokenizer, file):
         return tokenizer.encode(f.read()).ids
 
 
-def join_directory(data_folder, output_directory, sep=';'):
-    filenames = [os.path.join(data_folder, f) for f in os.listdir(data_folder)]
-    output_dataset = os.path.join(output_directory, 'data.txt')
-    with open(output_dataset, 'w') as outfile:
-        for fname in filenames:
-            with open(fname) as infile:
-                outfile.write(infile.read() + f"{sep}\n")
-
-    return output_dataset
 
 
 def prepare_dataset_with_tokenizer(data_folder, output_directory, sep=';', vocab_size=1000):
