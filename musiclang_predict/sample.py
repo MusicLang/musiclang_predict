@@ -74,6 +74,7 @@ class ModelLLM:
         load_meta = False
         if init_from == 'resume' and 'config' in checkpoint and 'dataset' in checkpoint['config']: # older checkpoints might not have these...
             meta_path = os.path.join(out_dir, 'meta.pkl')
+            from pdb import set_trace; set_trace()
             load_meta = os.path.exists(meta_path)
         if load_meta:
             print(f"Loading meta from {meta_path}...")
