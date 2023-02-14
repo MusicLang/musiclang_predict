@@ -1,7 +1,26 @@
+from tokenizers import Tokenizer
+from tokenizers.models import BPE
+from tokenizers.trainers import BpeTrainer
 import os
-import pickle
 import numpy as np
+import pickle
 
+
+def train_tokenizer(files, output_tokenizer, vocab_size):
+    tokenizer = Tokenizer(BPE(unk_token="[UNK]"))
+    trainer = BpeTrainer(special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"], vocab_size=vocab_size)
+    tokenizer.train(files, trainer)
+    tokenizer.save(os.path.join(output_tokenizer, "tokenizer.json"))
+    return tokenizer
+
+
+def load_tokenizer(directory):
+    tokenizer = Tokenizer.from_file(os.path.join(directory, "tokenizer.json"))
+
+
+def encode_data(tokenizer, file):
+    with open(file, 'r') as f:
+        return tokenizer.encode(f.read()).ids
 
 
 def join_directory(data_folder, output_directory, sep=';'):
@@ -15,11 +34,9 @@ def join_directory(data_folder, output_directory, sep=';'):
     return output_dataset
 
 
-
-
-def prepare_dataset(data_folder, output_directory, sep=';'):
+def prepare_dataset_with_tokenizer(data_folder, output_directory, sep=';', vocab_size=1000):
     """
-    Prepare a musiclang dataset for character-level language modeling.
+    Prepare a musiclang dataset for BPE encoding model
     It will first concatenate
     So instead of encoding with GPT-2 BPE tokens, we just map characters to ints.
     Will save train.bin, val.bin containing the ids, and meta.pkl containing the
@@ -34,6 +51,8 @@ def prepare_dataset(data_folder, output_directory, sep=';'):
         Directory where we will create the data files and the metadata
     sep: str
         Character that separates two scores
+    vocab_size: int
+        Number of tokens allowed
     """
 
     if not os.path.exists(output_directory):
@@ -47,21 +66,6 @@ def prepare_dataset(data_folder, output_directory, sep=';'):
         data = f.read()
     print(f"length of dataset in characters: {len(data):,}")
 
-    # get all the unique characters that occur in this text
-    chars = sorted(list(set(data)))
-    vocab_size = len(chars)
-    print("all the unique characters:", ''.join(chars))
-    print(f"vocab size: {vocab_size:,}")
-
-    # create a mapping from characters to integers
-    stoi = {ch: i for i, ch in enumerate(chars)}
-    itos = {i: ch for i, ch in enumerate(chars)}
-
-    def encode(s):
-        return [stoi[c] for c in s]  # encoder: take a string, output a list of integers
-
-    def decode(l):
-        ''.join([itos[i] for i in l])  # decoder: take a list of integers, output a string
 
     # create the train and test splits
     n = len(data)
@@ -69,8 +73,9 @@ def prepare_dataset(data_folder, output_directory, sep=';'):
     val_data = data[int(n * 0.9):]
 
     # encode both to integers
-    train_ids = encode(train_data)
-    val_ids = encode(val_data)
+    tokenizer = train_tokenizer([data_path], output_directory, vocab_size=vocab_size)
+    train_ids = tokenizer.encode(train_data).ids
+    val_ids = tokenizer.encode(val_data).ids
     print(f"train has {len(train_ids):,} tokens")
     print(f"val has {len(val_ids):,} tokens")
 
@@ -82,9 +87,8 @@ def prepare_dataset(data_folder, output_directory, sep=';'):
 
     # save the meta information as well, to help us encode/decode later
     meta = {
-        'vocab_size': vocab_size,
-        'itos': itos,
-        'stoi': stoi,
+        'vocab_size': vocab_size
     }
+
     with open(os.path.join(output_directory, 'meta.pkl'), 'wb') as f:
         pickle.dump(meta, f)

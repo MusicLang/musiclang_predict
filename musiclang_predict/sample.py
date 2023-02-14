@@ -7,19 +7,21 @@ from contextlib import nullcontext
 import torch
 import tiktoken
 from model import GPTConfig, GPT
-
+from tokenizers import Tokenizer
 
 
 class ModelLLM:
 
 
-    def __init__(self, model, encode, decode, ctx, device):
+    def __init__(self, model, encode, decode, ctx, device, tokenizer):
 
         self.model = model
         self.encode = encode
         self.decode = decode
         self.ctx = ctx
         self.device = device
+        self.tokenizer = tokenizer
+
 
     @classmethod
     def load_model(cls, name=None, path=None, update=False, **config):
@@ -80,13 +82,23 @@ class ModelLLM:
             with open(meta_path, 'rb') as f:
                 meta = pickle.load(f)
             # TODO want to make this more general to arbitrary encoder/decoder schemes
-            stoi, itos = meta['stoi'], meta['itos']
-            encode = lambda s: [stoi[c] for c in s]
-            decode = lambda l: ''.join([itos[i] for i in l])
+
+            if 'stoi' in meta:
+                stoi, itos = meta['stoi'], meta['itos']
+                encode = lambda s: [stoi[c] for c in s]
+                decode = lambda l: ''.join([itos[i] for i in l])
+                model = ModelLLM(model, encode, decode, ctx, device, tokenizer=None)
+            else:
+                # Load tokenizer
+                print('Loading custom tokenizer ...')
+                tokenizer = Tokenizer.from_file(os.path.join(out_dir, "tokenizer.json"))
+                encode = lambda s: tokenizer.encode(s).ids
+                decode = lambda l: tokenizer.decode(l)
+                model = ModelLLM(model, encode, decode, ctx, device, tokenizer=tokenizer)
         else:
             raise Exception('No encoding found (no meta.pkl in the directory)')
 
-        return ModelLLM(model, encode, decode, ctx, device)
+        return model
 
 
 

@@ -8,3 +8,4 @@ tqdm
 musiclang
 gdown
 gitpython
+tokenizers
