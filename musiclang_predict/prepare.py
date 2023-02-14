@@ -75,8 +75,8 @@ def prepare_dataset(data_folder, output_directory, sep=';'):
     # export to bin files
     train_ids = np.array(train_ids, dtype=np.uint16)
     val_ids = np.array(val_ids, dtype=np.uint16)
-    train_ids.tofile(os.path.join(os.path.dirname(__file__), 'train.bin'))
-    val_ids.tofile(os.path.join(os.path.dirname(__file__), 'val.bin'))
+    train_ids.tofile(os.path.join(output_directory, 'train.bin'))
+    val_ids.tofile(os.path.join(output_directory, 'val.bin'))
 
     # save the meta information as well, to help us encode/decode later
     meta = {
