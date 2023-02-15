@@ -78,7 +78,7 @@ class MusicLangPredictorWithTokenizer:
         score_str = score_str.replace('\t', '')
         score_str = score_str.replace('\n', '')
         print(score_str)
-        
+
         samples = self.model.sample(start=score_str, num_samples=1, **config)[0]
 
         samples = samples.replace(';', '+')
