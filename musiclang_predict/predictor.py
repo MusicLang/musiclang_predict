@@ -36,7 +36,6 @@ class MusicLangPredictor:
         prediction = self.CHORD_SEP.join(samples.split(self.CHORD_SEP)[:-1])
 
         target_nb_chords = (nb_chords + nb_chords_current)
-        from pdb import set_trace; set_trace()
         new_score = Score.from_str(prediction)
         new_score = new_score[:target_nb_chords]
         new_len_chord = len(new_score.chords)
@@ -75,6 +74,9 @@ class MusicLangPredictorWithTokenizer:
         nb_chords_current = len(score.chords)
 
         score_str = str(score)
+        score_str = score_str.replace(' ', '')
+        score_str = score_str.replace('\t', '')
+        score_str = score_str.replace('\n', '')
         samples = self.model.sample(start=score_str, num_samples=1, **config)[0]
 
         samples = samples.replace(';', '+')
