@@ -74,10 +74,6 @@ class MusicLangPredictorWithTokenizer:
         nb_chords_current = len(score.chords)
 
         score_str = str(score)
-        score_str = score_str.replace(' ', '')
-        score_str = score_str.replace('\n', '')
-        score_str = score_str.replace('\t', '')
-
         samples = self.model.sample(start=score_str, num_samples=1, **config)[0]
 
         samples = samples.replace(';', '+')
