@@ -1,5 +1,4 @@
-# train a miniature character-level shakespeare model
-# good for debugging and playing on macbooks and such
+
 
 CONFIG_MUSICLANG_BASIC = {'eval_interval': 250, 'eval_iters': 200, 'log_interval': 10,
                           'always_save_checkpoint': False, 'wandb_log': False, 'wandb_project': 'musiclang-char',

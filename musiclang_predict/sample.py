@@ -88,7 +88,7 @@ class ModelLLM:
 
             if 'stoi' in meta:
                 stoi, itos = meta['stoi'], meta['itos']
-                encode = lambda s: [stoi[c] for c in s]
+                encode = lambda s: [stoi[c] for c in s.replace(' ', '').replace('\n', '').replace('\t', '')]
                 decode = lambda l: ''.join([itos[i] for i in l])
                 model = ModelLLM(model, encode, decode, ctx, device, tokenizer=None)
             else:
