@@ -17,7 +17,3 @@ CONFIG_MUSICLANG_BASIC_SMALL = {'eval_interval': 250, 'eval_iters': 200, 'log_in
                           'max_iters': 1000, 'lr_decay_iters': 1000, 'min_lr': 1e-4, 'beta2': 0.99,
                           'warmup_iters': 25}
 
-
-# on macbook also add
-# device = 'cpu'  # run on cpu only
-# compile = False # do not torch compile the model

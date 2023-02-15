@@ -21,6 +21,9 @@ class ModelLLM:
         self.ctx = ctx
         self.device = device
         self.tokenizer = tokenizer
+        if self.tokenizer is not None:
+            self.encode = lambda x: self.tokenizer.encode(x).ids
+            self.decode = lambda x: self.tokenizer.decode(x).replace(' ', '')
 
 
     @classmethod
