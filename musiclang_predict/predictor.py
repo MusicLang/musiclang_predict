@@ -55,7 +55,7 @@ class MusicLangPredictorWithTokenizer:
     @classmethod
     def load_model(cls, name=None, path=None, update=False, **config):
         model = ModelLLM.load_model(name=name, path=path, update=update, **config)
-        return MusicLangPredictor(model)
+        return MusicLangPredictorWithTokenizer(model)
 
 
     def predict(self, score, nb_chords=1, **config):
