@@ -1,6 +1,9 @@
 MusicLang Predict
 =================
 
+![MusicLang logo](https://github.com/MusicLang/musiclang/blob/main/documentation/images/MusicLang.png?raw=true "MusicLang")
+
+
 MusicLang Predict is a tool to create original midi soundtracks with generative AI model.
 It can be used for different use cases :
 - Predict a new song from scratch (a fixed number of bars)
