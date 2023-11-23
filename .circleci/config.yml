@@ -1,0 +1,111 @@
+# CircleCI configuration file
+version: 2.1
+
+
+orbs:
+  python: circleci/python@2.1.1
+
+jobs:
+  test: # this can be any name you choose
+    executor: python/default
+    steps:
+      - checkout # checkout source code
+      - python/install-packages:
+          pkg-manager: pip
+      - run: pip install pytest
+      - run:
+          name: Run tests
+          command: python -m pytest
+      - persist_to_workspace:
+          root: ~/project
+          paths:
+            - .
+  deploy-on-pypi:
+    executor: python/default
+    steps:
+      - checkout
+      - run: git config user.email $EMAIL
+      - run: git config user.name "MusicLang bot"
+      - run: pip install bumpversion
+      - run: bumpversion patch
+      - run: git push
+      - python/dist
+      - run: ls dist/
+      - run: pip install twine && twine upload dist/* --non-interactive --verbose
+
+  deploy-on-pypi-minor:
+    executor: python/default
+    steps:
+      - checkout
+      - run: git config user.email $EMAIL
+      - run: git config user.name "MusicLang bot"
+      - run: pip install bumpversion
+      - run: bumpversion minor
+      - run: git push
+      - python/dist
+      - run: ls dist/
+      - run: pip install twine && twine upload dist/* --non-interactive --verbose
+
+
+  deploy-on-pypi-major:
+    executor: python/default
+    steps:
+      - checkout
+      - run: git config user.email $EMAIL
+      - run: git config user.name "MusicLang bot"
+      - run: pip install bumpversion
+      - run: bumpversion major
+      - run: git push
+      - python/dist
+      - run: ls dist/
+      - run: pip install twine && twine upload dist/* --non-interactive --verbose
+
+
+workflows:
+  version: 2
+  build-test-and-deploy:
+    jobs:
+      - test
+      - approve-deployment:
+          requires:
+            - test
+          type: approval
+          filters:
+            branches:
+              only: main
+      - approve-deployment-minor:
+          requires:
+            - test
+          type: approval
+          filters:
+            branches:
+              only: main
+
+      - approve-deployment-major:
+          requires:
+            - test
+          type: approval
+          filters:
+            branches:
+              only: main
+
+      - deploy-on-pypi:
+          requires:
+            - approve-deployment
+          filters:
+            branches:
+              only: main
+
+      - deploy-on-pypi-minor:
+          requires:
+            - approve-deployment-minor
+          filters:
+            branches:
+              only: main
+
+      - deploy-on-pypi-major:
+          requires:
+            - approve-deployment-major
+          filters:
+            branches:
+              only: main
