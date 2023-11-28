@@ -1,0 +1,10 @@
+musiclang>=0.17.0
+torch
+transformers
+tokenizers
+torchtoolkit
+accelerate
+
+[dev]
+pip-tools
+pytest
