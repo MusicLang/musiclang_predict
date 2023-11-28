@@ -61,14 +61,14 @@ class MusicLangTokenizer:
     NOTE_DURATION_DEN = 'NOTE_DURATION_DEN'
     END = 'END'
 
-    def __init__(self, tokenizer_path=None, options=None):
+    def __init__(self, tokenizer_path=None, options=None, hub_tokenizer_path='tokenizer-base.json'):
         self.dict = {}
         if tokenizer_path is not None:
             try:
                 with open(tokenizer_path, 'r') as f:
                     self.dict = json.load(f)
             except Exception as e:
-                tokenizer_path = hf_hub_download(repo_id=tokenizer_path, filename="tokenizer.json")
+                tokenizer_path = hf_hub_download(repo_id=tokenizer_path, filename=hub_tokenizer_path)
                 with open(tokenizer_path, 'r') as f:
                     self.dict = json.load(f)
 
