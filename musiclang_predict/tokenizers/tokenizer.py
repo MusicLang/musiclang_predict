@@ -1,8 +1,10 @@
+import copy
+
 from musiclang import Score, Chord, Note, Melody, Tonality
 import os
 import tempfile
 import json
-from fractions import Fraction as  frac
+from fractions import Fraction as frac
 import joblib
 import numpy as np
 from multiprocessing import Pool
@@ -10,6 +12,44 @@ import functools
 from huggingface_hub import hf_hub_download
 from tqdm import tqdm
 import gc
+from fractions import Fraction as frac
+
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from tokenizers import Tokenizer
+from tokenizers.models import WordLevel
+from tokenizers.pre_tokenizers import Whitespace, WhitespaceSplit
+from tokenizers.processors import TemplateProcessing
+from tokenizers.trainers import WordLevelTrainer
+from tokenizers.pre_tokenizers import PreTokenizer
+
+
+import tempfile
+
+
+NOTE_DURATION_MAX_DENOMINATOR = 8
+CHORD_DURATION_MAX_DENOMINATOR = 4
+
+TOKENIZER_CONFIG_BASE = {
+  "model_max_len": 4096,
+  "model_max_length": 4096,
+  "pad_token": "[PAD]",
+  "pad_token_id": 3,
+  "eos_token": "[END]",
+  "eos_token_id": 45,
+  "bos_token": "[START]",
+  "bos_token_id": 5,
+  "mask_token": "[MASK]",
+  "mask_token_id": 4,
+  "unk_token": "[UNK]",
+  "unk_token_id": 0,
+  "cls_token": "[CLS]",
+  "cls_token_id": 1,
+  "sep_token": "[SEP]",
+  "seo_token_id": 2,
+  "add_prefix_space": False,
+  "tokenizer_class": "PreTrainedTokenizer",
+  "type": "Split"
+}
 
 
 default_options = {
@@ -17,6 +57,7 @@ default_options = {
     'melody_end_token': True,
     'chord_duration_token': True,
     'density_token': True,
+    'chord_extension_token': True,
     'next_chord_token': True,
     'will_end_token': True,
     'dissonance_token': True,
@@ -28,6 +69,9 @@ class MusicLangTokenizer:
     Convert a score into a list of tokens
     """
 
+    SCORE_START = 'SCORE_START'
+    UNKNOWN = 'UNKNOWN'
+
     CHORD_DEGREE = 'CHORD_DEGREE'
     TONALITY_DEGREE = 'TONALITY_DEGREE'
     TONALITY_MODE = 'TONALITY_MODE'
@@ -35,10 +79,13 @@ class MusicLangTokenizer:
     CHORD_DURATION_NUM = 'CHORD_DURATION_NUM'
     CHORD_DURATION_DEN = 'CHORD_DURATION_DEN'
 
+    CHORD_EXTENSION = 'CHORD_EXTENSION'
+
     NEXT_CHORD_DEGREE = 'NEXT_CHORD_DEGREE'
     NEXT_TONALITY_DEGREE = 'NEXT_TONALITY_DEGREE'
     NEXT_TONALITY_MODE = 'NEXT_TONALITY_MODE'
     NEXT_CHORD_OCTAVE = 'NEXT_CHORD_OCTAVE'
+    NEXT_CHORD_EXTENSION = 'NEXT_CHORD_EXTENSION'
     NEXT_CHORD_DURATION_NUM = 'NEXT_CHORD_DURATION_NUM'
     NEXT_CHORD_DURATION_DEN = 'NEXT_CHORD_DURATION_DEN'
 
@@ -132,6 +179,89 @@ class MusicLangTokenizer:
         dict = {token: idx for idx, token in enumerate(unique_tokens)}
         inv_dict = {idx: token for idx, token in enumerate(unique_tokens)}
         self.dict = {'token_to_id': dict, 'id_to_token': inv_dict, 'options': self.dict['options']}
+
+
+    def tokenize_sequence(self, seq):
+        """
+        Tokenize a sequence of tokens (A pandas dataframe with appropriate columns
+        Parameters
+        ----------
+        seq: pd.DataFrame
+
+        Returns
+        -------
+        tokens: str
+        """
+
+        score = Score.from_sequence(seq)
+        return self.tokenize(score)
+
+
+
+    def train_tokenizer_from_token_files(self, token_files, output=None, hub_output=None, **kwargs):
+        """
+        Train a tokenizer from a list of token files
+        Parameters
+        ----------
+        token_files:
+        output_tokenizer: Path to save the tokenizer
+        output: Path to save the tokenizer and the config file (Either output or hub_output must be not None)
+        hub_output: Path to save the tokenizer and the config file in the huggingface hub
+
+        Returns
+        -------
+        tokenizer: Tokenizer
+        """
+
+
+        def train_tokenizer(data_files, vocab_size=30_000,
+                            special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]", "[START]"]):
+            # Create a tokenizer
+            tokenizer = Tokenizer(WordLevel(unk_token="[UNK]"))
+            # Pre-tokenizer to split the text into words
+            tokenizer.pre_tokenizer = WhitespaceSplit()
+            # tokenizer.pre_tokenizer = PreTokenizer.custom("whitespace_split", "regex", pattern=r"\s+")
+            # Special tokens
+            tokenizer.add_special_tokens(special_tokens)
+            # Trainer
+            trainer = WordLevelTrainer(
+                # vocab_size=vocab_size,
+                special_tokens=special_tokens,
+            )
+
+            # Train the tokenizer
+            tokenizer.train(files=data_files, trainer=trainer)
+            return tokenizer
+
+        # Example usage
+        data_files = token_files  # Replace with the path to your text file
+        tokenizer = train_tokenizer(data_files)
+        # Save the tokenizer to a temp directory
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            tokenizer.save(os.path.join(tmpdirname, "tokenizer.json"))
+
+            # Save TOKENIZER_BASE as tokenizer_config.json in directory
+            options = copy.deepcopy(TOKENIZER_CONFIG_BASE)
+            for key, value in kwargs.items():
+                options[key] = value
+
+            with open(os.path.join(tmpdirname, 'tokenizer_config.json'), 'w') as f:
+                json.dump(options, f, indent=4)
+            # Reload tokenizer to push it or save it
+            tokenizer = AutoTokenizer.from_pretrained(tmpdirname)
+            if output is not None:
+                tokenizer.save_pretrained(output)
+            if hub_output is not None:
+                tokenizer.push_to_hub(hub_output)
+            if output is None and hub_output is None:
+                # Raise ONLY a warning
+                print("WARNING: hub_output is None, tokenizer not pushed to hub")
+
+        return tokenizer
+
+
+    def tokenize_chords(self, score):
+        return self.tokenize(score, only_chords=True)
 
     def ids_to_tokens(self, ids):
         """
@@ -353,7 +483,7 @@ class MusicLangTokenizer:
         else:
             return 'very_high'
 
-    def tokenize(self, score):
+    def tokenize(self, score, only_chords=False):
         if isinstance(score, Chord):
             score = Score(chords=[score])
         tokens = []
@@ -362,9 +492,9 @@ class MusicLangTokenizer:
             octave_means = chord.to_score().extract_mean_octaves()
             amplitude_means = chord.to_score().extract_mean_amplitudes()
 
-            tokens_chord = self.tokenize_chord(chord)
-            tokens +=  tokens_chord
-            if self.dict['options'].get('next_chord_token', False):
+            tokens_chord = self.tokenize_chord(chord, only_chords=only_chords)
+            tokens += tokens_chord
+            if self.dict['options'].get('next_chord_token', False) and not only_chords:
                 # Last element
                 if idx < len(score.chords) - 1:
                     next_chord = score.chords[idx + 1]
@@ -373,28 +503,28 @@ class MusicLangTokenizer:
                 else:
                     tokens += [self.WILL_END]
 
-            for ins, melody in chord.score.items():
-
-                ins_name, ins_part = ins.split('__')
-                tokens_ins_name = self.INSTRUMENT_NAME + '__' + ins_name
-                tokens_ins_part = self.INSTRUMENT_PART + '__' + ins_part
-                tokens += [tokens_ins_name, tokens_ins_part]
-                if self.dict['options'].get('density_token', False):
-                    instrument_density = densities[ins]
-                    density_str = self.density_to_density_str(instrument_density)
-                    tokens_density = self.DENSITY + '__' + density_str
-                    tokens += [tokens_density]
-                if self.dict['options'].get('average_octave_token', False):
-                    tokens_average_octave = self.AVERAGE_OCTAVE + '__' + str(octave_means[ins])
-                    tokens += [tokens_average_octave]
-                if self.dict['options'].get('amplitude_token', False):
-                    tokens_amplitude = self.AMPLITUDE + '__' + str(amplitude_means[ins])
-                    tokens += [tokens_amplitude]
-                for note in melody:
-                    tokens_note = self.tokenize_note(note)
-                    tokens += tokens_note
-                if self.dict['options'].get('melody_end_token', False):
-                    tokens.append(self.MELODY_END)
+            if not only_chords:
+                for ins, melody in chord.score.items():
+                    ins_name, ins_part = ins.split('__')
+                    tokens_ins_name = self.INSTRUMENT_NAME + '__' + ins_name
+                    tokens_ins_part = self.INSTRUMENT_PART + '__' + ins_part
+                    tokens += [tokens_ins_name, tokens_ins_part]
+                    if self.dict['options'].get('density_token', False):
+                        instrument_density = densities[ins]
+                        density_str = self.density_to_density_str(instrument_density)
+                        tokens_density = self.DENSITY + '__' + density_str
+                        tokens += [tokens_density]
+                    if self.dict['options'].get('average_octave_token', False):
+                        tokens_average_octave = self.AVERAGE_OCTAVE + '__' + str(octave_means[ins])
+                        tokens += [tokens_average_octave]
+                    if self.dict['options'].get('amplitude_token', False):
+                        tokens_amplitude = self.AMPLITUDE + '__' + str(amplitude_means[ins])
+                        tokens += [tokens_amplitude]
+                    for note in melody:
+                        tokens_note = self.tokenize_note(note)
+                        tokens += tokens_note
+                    if self.dict['options'].get('melody_end_token', False):
+                        tokens.append(self.MELODY_END)
         tokens.append(self.END)
 
         return tokens
@@ -409,28 +539,37 @@ class MusicLangTokenizer:
         note_degree = self.NOTE_VAL + '__' + str(note.val)
         note_octave = self.NOTE_OCTAVE + '__' + str(note.octave)
         note_amp = self.NOTE_AMP + '__' + note.amp_figure
-        note_duration_num = self.NOTE_DURATION_NUM + '__' + str(note.duration.numerator)
-        note_duration_den = self.NOTE_DURATION_DEN + '__' + str(note.duration.denominator)
+
+        # Limit denominator of duration to 4
+        note_duration = frac(note.duration).limit_denominator(NOTE_DURATION_MAX_DENOMINATOR)
+
+        note_duration_num = self.NOTE_DURATION_NUM + '__' + str(note_duration.numerator)
+        note_duration_den = self.NOTE_DURATION_DEN + '__' + str(note_duration.denominator)
         # Create the list
         tokens = [note_type, note_degree, note_octave, note_amp, note_duration_num, note_duration_den]
         return tokens
 
-    def tokenize_chord(self, chord):
+    def tokenize_chord(self, chord, only_chords=False):
         tokens = []
         if self.dict['options']['chord_change_token']:
             tokens.append(self.CHORD_CHANGE)
 
         chord_degree = self.CHORD_DEGREE + '__' + str(chord.element)
-        chord_octave = self.CHORD_OCTAVE + '__' + str(chord.octave)
+        chord_octave = self.CHORD_OCTAVE + '__' + str(chord.full_octave)
+        chord_extension = self.CHORD_EXTENSION + '__' + str(chord.extension)
         tonality_degree = self.TONALITY_DEGREE + '__' + str(chord.tonality.degree)
         tonality_mode = self.TONALITY_MODE + '__' + chord.tonality.mode
 
         # Create the list
         tokens += [chord_degree, tonality_degree, tonality_mode, chord_octave]
 
-        if self.dict['options']['chord_duration_token']:
-            chord_duration_num = self.CHORD_DURATION_NUM + '__' + str(chord.duration.numerator)
-            chord_duration_den = self.CHORD_DURATION_DEN + '__' + str(chord.duration.denominator)
+        if self.dict['options']['chord_extension_token']:
+            tokens += [chord_extension]
+
+        if self.dict['options']['chord_duration_token'] and not only_chords:
+            chord_duration = frac(chord.duration).limit_denominator(CHORD_DURATION_MAX_DENOMINATOR)
+            chord_duration_num = self.CHORD_DURATION_NUM + '__' + str(chord_duration.numerator)
+            chord_duration_den = self.CHORD_DURATION_DEN + '__' + str(chord_duration.denominator)
             tokens += [chord_duration_num, chord_duration_den]
 
         return tokens
@@ -450,19 +589,53 @@ class MusicLangTokenizer:
             chord_duration_den = self.NEXT_CHORD_DURATION_DEN + '__' + str(chord.duration.denominator)
             tokens += [chord_duration_num, chord_duration_den]
 
+        if self.dict['options']['chord_extension_token']:
+            chord_extension = self.NEXT_CHORD_EXTENSION + '__' + str(chord.extension)
+            tokens += [chord_extension]
+
         return tokens
 
+
+
+
+
     def untokenize(self, tokens):
+        if isinstance(tokens, str):
+            # Split by \n or whitespace
+            tokens = tokens.split()
+
         score = Score()
         current_chord = None
         current_melody = None
         current_instrument_name = None
         current_instrument_part = None
 
+        current_chord_duration_num = None
+        current_chord_duration_den = None
+        chord_duration = None
+        current_melody_duration = 0
+        note_duration_num = 0
+        note_duration_den = 0
+
         for token in tokens:
             # Split token into key and value
-            if token in ['END', 'MELODY_END', 'CHORD_CHANGE', 'WILL_END']:
+            if token in [self.END, self.CHORD_CHANGE, self.WILL_END, self.SCORE_START]:
                 continue
+
+            if token == self.MELODY_END:
+                # Check if melody duration is equal to chord duration, else add a rest
+                if current_melody_duration < chord_duration:
+                    delta = chord_duration - current_melody_duration
+                    note_duration_num = int(delta.numerator)
+                    note_duration_den = int(delta.denominator)
+                    note_duration = frac(note_duration_num, note_duration_den)
+                    if note_duration > 0:
+                        note = Note(type='r', val=0, octave=0, duration=note_duration)
+                        current_melody.notes.append(note)
+                # Then continue
+                current_chord.score[current_instrument_name + '__' + current_instrument_part] = current_melody
+                continue
+
             key, value = token.split('__')
 
             if key == self.CHORD_DEGREE:
@@ -473,14 +646,27 @@ class MusicLangTokenizer:
             elif key == self.CHORD_OCTAVE:
                 current_chord.octave = int(value)
 
+            elif key == self.CHORD_DURATION_NUM:
+                current_chord_duration_num = int(value)
+
+            elif key == self.CHORD_DURATION_DEN:
+                current_chord_duration_den = int(value)
+                chord_duration = frac(current_chord_duration_num, current_chord_duration_den)
+
             elif key == self.TONALITY_DEGREE:
                 current_chord.tonality.degree = int(value)  # Assuming Tonality can be constructed from a string
 
             elif key == self.TONALITY_MODE:
                 current_chord.tonality.mode = value
 
+            elif key == self.CHORD_EXTENSION:
+                current_chord.extension = value
+
             elif key == self.INSTRUMENT_NAME:
                 current_instrument_name = value
+                current_melody_duration = 0
+                note_duration_num = 0
+                note_duration_den = 0
                 current_melody = Melody(notes=[])
 
             elif key == self.INSTRUMENT_PART:
@@ -504,10 +690,24 @@ class MusicLangTokenizer:
 
             elif key == self.NOTE_DURATION_DEN:
                 note_duration_den = int(value)
-                note_duration = frac(note_duration_num, note_duration_den)
-                note = Note(type=note_type, val=note_val, octave=note_octave, duration=note_duration)
-                note = note.set_amp(note_amp)
-                current_melody.notes.append(note)
+                current_note_duration = frac(note_duration_num, note_duration_den)
+                if current_melody_duration + current_note_duration > chord_duration:
+                    delta = current_melody_duration + current_note_duration - chord_duration
+                    note_duration_num = int(delta.numerator)
+                    note_duration_den = int(delta.denominator)
+                    note_duration = current_note_duration - frac(note_duration_num, note_duration_den)
+                    if note_duration > 0:
+                        note = Note(type=note_type, val=note_val, octave=note_octave, duration=note_duration)
+                        note = note.set_amp(note_amp)
+                        current_melody.notes.append(note)
+                    current_melody_duration += note_duration
+                    current_chord.score[current_instrument_name + '__' + current_instrument_part] = current_melody
+                else:
+                    note = Note(type=note_type, val=note_val, octave=note_octave, duration=current_note_duration)
+                    note = note.set_amp(note_amp)
+                    current_melody_duration += current_note_duration
+                    current_melody.notes.append(note)
+
                 current_instrument = current_instrument_name + '__' + current_instrument_part
                 current_chord.score[current_instrument] = current_melody
 
