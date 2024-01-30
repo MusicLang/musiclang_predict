@@ -16,7 +16,7 @@ classifiers = [
 ]
 keywords = ["music", "ai", "notation"]
 dependencies = [
-        "musiclang>=0.17.0",
+        "musiclang==0.21.0",
         "torch",
         "transformers",
         "tokenizers",
@@ -29,4 +29,4 @@ requires-python = ">=3.9"
 dev = ["pip-tools", "pytest"]
 
 [project.urls]
-Homepage = "https://github.com/MusicLang/musiclang"
+Homepage = "https://github.com/MusicLang/musiclang_predict"
