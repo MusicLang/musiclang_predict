@@ -83,6 +83,28 @@ soundtrack = predict_with_template(template, model, tokenizer,
 soundtrack.to_midi('song.mid', tempo=template['tempo'], time_signature=template['time_signature'])
 ```
 
+4. Chord prediction with a transformer model
+
+```python
+from musiclang_predict import predict_chords, MusicLangTokenizer
+from transformers import GPT2LMHeadModel
+from musiclang.library import *
+
+prompt = (I % I.M) + (V % I.M)['6'].o(-1)
+
+# Load model and tokenizer
+model = GPT2LMHeadModel.from_pretrained('musiclang/musiclang-chord-v2-4k')
+tokenizer = MusicLangTokenizer('musiclang/musiclang-chord-v2-4k')
+soundtrack = predict_chords(model, tokenizer, chord_duration=4, nb_chords=2, prompt=prompt)
+
+# Give the chord a simple voicing (closed position chord)
+soundtrack = soundtrack(b0, b1, b2, b3)
+
+# Save it to midi
+soundtrack.to_midi('song.mid', tempo=120, time_signature=(4, 4))
+
+```
+
 Contact us
 ----------
 

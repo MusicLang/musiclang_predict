@@ -16,12 +16,12 @@ classifiers = [
 ]
 keywords = ["music", "ai", "notation"]
 dependencies = [
-        "musiclang==0.21.0",
-        "torch",
-        "transformers",
-        "tokenizers",
-        "torchtoolkit",
-        "accelerate"
+            "musiclang>=0.23",
+            "torch",
+            "transformers",
+            "tokenizers",
+            "torchtoolkit",
+            "accelerate"
 ]
 requires-python = ">=3.9"
 

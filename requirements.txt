@@ -1,4 +1,4 @@
-musiclang==0.21.0
+musiclang>=0.23
 torch
 transformers
 tokenizers
