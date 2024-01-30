@@ -24,12 +24,12 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     install_requires=[
-        "musiclang>=0.17.0",
-        "torch",
-        "transformers",
-        "tokenizers",
-        "torchtoolkit",
-        "accelerate"
+            "musiclang>=0.23",
+            "torch",
+            "transformers",
+            "tokenizers",
+            "torchtoolkit",
+            "accelerate"
                       ],
     packages=setuptools.find_packages(include='*'),
     include_package_data=True,
