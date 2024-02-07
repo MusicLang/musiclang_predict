@@ -169,15 +169,13 @@ def predict_with_template(template,
 
 
 def predict_chords(model, tokenizer, nb_chords=4, prompt=None, temperature=0.9):
-    from musiclang_predict import MusicLangTokenizer
-    msl_tokenizer = MusicLangTokenizer()
 
     if prompt is None:
         nb_chord_init = 0
         prompt = "CHORD_CHANGE"
     else:
         nb_chord_init = len(prompt.chords)
-        prompt = " ".join(msl_tokenizer.tokenize_chords(prompt))
+        prompt = " ".join(tokenizer.tokenize_chords(prompt))
 
     ids = tokenizer(prompt, add_special_tokens=False, return_tensors='pt').input_ids
     nb_tokens = (nb_chords + 1 + nb_chord_init) * 6
@@ -185,7 +183,7 @@ def predict_chords(model, tokenizer, nb_chords=4, prompt=None, temperature=0.9):
                             max_new_tokens=nb_tokens,
                             )[0]
     seq = tokenizer.decode(result)
-    score = msl_tokenizer.untokenize(prompt + ' ' + seq)
+    score = tokenizer.untokenize(prompt + ' ' + seq)
     score = score[:nb_chords]
 
     return score

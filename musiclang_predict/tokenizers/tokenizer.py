@@ -23,7 +23,6 @@ from tokenizers.trainers import WordLevelTrainer
 from tokenizers.pre_tokenizers import PreTokenizer
 
 
-import tempfile
 
 
 NOTE_DURATION_MAX_DENOMINATOR = 8
@@ -110,18 +109,21 @@ class MusicLangTokenizer:
 
     def __init__(self, tokenizer_path=None, options=None, hub_tokenizer_path='tokenizer-base.json'):
         self.dict = {}
-        if tokenizer_path is not None:
+        self.tokenizer = None
+        if tokenizer_path is None:
+            import warnings
+            warnings.warn("No tokenizer_path provided. Using a new tokenizer. You probably should train it using 'train_tokenizer_from_token_files' method.")
+        else:
             try:
                 with open(tokenizer_path, 'r') as f:
                     self.dict = json.load(f)
             except Exception as e:
-                tokenizer_path = hf_hub_download(repo_id=tokenizer_path, filename=hub_tokenizer_path)
-                with open(tokenizer_path, 'r') as f:
+                tokenizer_path_hub = hf_hub_download(repo_id=tokenizer_path, filename=hub_tokenizer_path)
+                with open(tokenizer_path_hub, 'r') as f:
                     self.dict = json.load(f)
-
-            # Replace str to int for keys of id_to_token
-            self.dict['id_to_token'] = {int(k): v for k, v in self.dict['id_to_token'].items()}
-
+            self.dict['id_to_token'] = {int(k): v for k, v in self.dict.get('id_to_token', {}).items()}
+            self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+        # Replace str to int for keys of id_to_token
         if options is not None:
             self.dict['options'] = options
         elif 'options' not in self.dict:
@@ -200,7 +202,11 @@ class MusicLangTokenizer:
 
     def train_tokenizer_from_token_files(self, token_files, output=None, hub_output=None, **kwargs):
         """
-        Train a tokenizer from a list of token files
+        Train a tokenizer from a list of token files.
+        It will also save a tokenizer-base.json file with the options used to train the tokenizer
+        (needed for tokenization from musiclang language)
+
+        Make sure you have logged in to huggingface using `huggingface-cli login` before training and pushing to the hub
         Parameters
         ----------
         token_files:
@@ -251,14 +257,35 @@ class MusicLangTokenizer:
             tokenizer = AutoTokenizer.from_pretrained(tmpdirname)
             if output is not None:
                 tokenizer.save_pretrained(output)
+                # Save base options
+                with open(os.path.join(output, 'tokenizer-base.json'), 'w') as f:
+                    json.dump({"options": options}, f, indent=4)
             if hub_output is not None:
                 tokenizer.push_to_hub(hub_output)
+                # Push base options to hub (1. save to a tempfile, 2. then use hf api to push to hub)
+                with tempfile.TemporaryDirectory() as tmpdirname:
+                    with open(os.path.join(tmpdirname, 'tokenizer-base.json'), 'w') as f:
+                        json.dump({"options": options}, f, indent=4)
+                    from huggingface_hub import HfApi
+                    hf_api = HfApi()
+                    hf_api.upload_file(
+                        path_or_fileobj=os.path.join(tmpdirname, 'tokenizer-base.json'),
+                        path_in_repo="tokenizer-base.json",
+                        repo_id=hub_output,
+                        repo_type="model",
+                    )
+
             if output is None and hub_output is None:
                 # Raise ONLY a warning
                 print("WARNING: hub_output is None, tokenizer not pushed to hub")
 
         return tokenizer
 
+    def __call__(self, *args, **kwargs):
+        return self.tokenizer(*args, **kwargs)
+
+    def decode(self, *args, **kwargs):
+        return self.tokenizer.decode(*args, **kwargs)
 
     def tokenize_chords(self, score):
         return self.tokenize(score, only_chords=True)
@@ -352,9 +379,11 @@ class MusicLangTokenizer:
         -------
 
         """
-        return [self.dict['token_to_id'][token] for token in tokens]
+        if self.tokenizer is None:
+            raise ValueError("No tokens to ids available. You must train the tokenizer first using train_tokenizer_from_token_files method.")
+        res_with_tokenizer = self.tokenizer(" ".join(tokens))
 
-
+        return res_with_tokenizer['input_ids']
 
     def train(self, midi_files, output, num_processes=8, resume=True, interceptors=None, **kwargs):
         """
@@ -366,6 +395,9 @@ class MusicLangTokenizer:
         Returns
         -------
         """
+        import warnings
+        warnings.warn("This method is deprecated. Use train_tokenizer_from_token_files instead.")
+
         output_tokens = os.path.join(output, 'tokens')
         output_tokenizer = os.path.join(output, 'tokenizer.json')
         output_ids = os.path.join(output, 'ids')
