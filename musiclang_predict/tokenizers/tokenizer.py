@@ -563,10 +563,10 @@ class MusicLangTokenizer:
         # Create the list
         tokens += [chord_degree, tonality_degree, tonality_mode, chord_octave]
 
-        if self.dict['options']['chord_extension_token']:
+        if self.dict['options'].get('chord_extension_token', False):
             tokens += [chord_extension]
 
-        if self.dict['options']['chord_duration_token'] and not only_chords:
+        if self.dict['options'].get('chord_duration_token', False) and not only_chords:
             chord_duration = frac(chord.duration).limit_denominator(CHORD_DURATION_MAX_DENOMINATOR)
             chord_duration_num = self.CHORD_DURATION_NUM + '__' + str(chord_duration.numerator)
             chord_duration_den = self.CHORD_DURATION_DEN + '__' + str(chord_duration.denominator)
