@@ -259,13 +259,13 @@ class MusicLangTokenizer:
                 tokenizer.save_pretrained(output)
                 # Save base options
                 with open(os.path.join(output, 'tokenizer-base.json'), 'w') as f:
-                    json.dump({"options": options}, f, indent=4)
+                    json.dump({"options": self.dict['options']}, f, indent=4)
             if hub_output is not None:
                 tokenizer.push_to_hub(hub_output)
                 # Push base options to hub (1. save to a tempfile, 2. then use hf api to push to hub)
                 with tempfile.TemporaryDirectory() as tmpdirname:
                     with open(os.path.join(tmpdirname, 'tokenizer-base.json'), 'w') as f:
-                        json.dump({"options": options}, f, indent=4)
+                        json.dump({"options":  self.dict['options']}, f, indent=4)
                     from huggingface_hub import HfApi
                     hf_api = HfApi()
                     hf_api.upload_file(
