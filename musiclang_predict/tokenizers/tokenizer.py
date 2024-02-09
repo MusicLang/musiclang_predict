@@ -58,10 +58,13 @@ default_options = {
     'density_token': True,
     'chord_extension_token': True,
     'next_chord_token': True,
+    'next_chord_duration_token': True,
     'will_end_token': True,
     'dissonance_token': True,
     'amplitude_token': True,
-    'average_octave_token': True
+    'average_octave_token': True,
+    'voice_token': False,
+    'random_instrument_permutation': True
 }
 class MusicLangTokenizer:
     """
@@ -516,6 +519,12 @@ class MusicLangTokenizer:
             return 'very_high'
 
     def tokenize(self, score, only_chords=False):
+        if self.dict['options'].get('random_instrument_permutation', False):
+            import random
+            instruments = score.instruments
+            random.shuffle(instruments)
+            sort_dict = {ins: idx for idx, ins in enumerate(instruments)}
+
         if isinstance(score, Chord):
             score = Score(chords=[score])
         tokens = []
@@ -536,11 +545,19 @@ class MusicLangTokenizer:
                     tokens += [self.WILL_END]
 
             if not only_chords:
-                for ins, melody in chord.score.items():
+
+                if self.dict['options'].get('random_instrument_permutation', True):
+                    items = sorted(chord.score.items(), key=lambda x: sort_dict[x[0]])
+                else:
+                    items = chord.score.items()
+
+                for ins, melody in items:
                     ins_name, ins_part = ins.split('__')
                     tokens_ins_name = self.INSTRUMENT_NAME + '__' + ins_name
-                    tokens_ins_part = self.INSTRUMENT_PART + '__' + ins_part
-                    tokens += [tokens_ins_name, tokens_ins_part]
+                    tokens.append(tokens_ins_name)
+                    if self.dict['options'].get('voice_token', True):
+                        tokens_ins_part = self.INSTRUMENT_PART + '__' + ins_part
+                        tokens.append(tokens_ins_part)
                     if self.dict['options'].get('density_token', False):
                         instrument_density = densities[ins]
                         density_str = self.density_to_density_str(instrument_density)
@@ -616,7 +633,7 @@ class MusicLangTokenizer:
 
         tokens += [chord_degree, tonality_degree, tonality_mode, chord_octave]
 
-        if self.dict['options']['chord_duration_token']:
+        if self.dict['options'].get('next_chord_duration_token', True):
             chord_duration = frac(chord.duration).limit_denominator(CHORD_DURATION_MAX_DENOMINATOR)
             chord_duration_num = self.NEXT_CHORD_DURATION_NUM + '__' + str(chord_duration.numerator)
             chord_duration_den = self.NEXT_CHORD_DURATION_DEN + '__' + str(chord_duration.denominator)
@@ -650,6 +667,8 @@ class MusicLangTokenizer:
         note_duration_num = 0
         note_duration_den = 0
 
+        current_instrument_idx = {}
+
         for token in tokens:
             # Split token into key and value
             if token in [self.END, self.CHORD_CHANGE, self.WILL_END, self.SCORE_START]:
@@ -675,6 +694,7 @@ class MusicLangTokenizer:
                 if current_chord is not None:
                     score.chords.append(current_chord)
                 current_chord = Chord(element=int(value), tonality=Tonality(0, 'M'))
+                current_instrument_idx = {}
 
             elif key == self.CHORD_OCTAVE:
                 current_chord.octave = int(value)
@@ -701,6 +721,14 @@ class MusicLangTokenizer:
                 note_duration_num = 0
                 note_duration_den = 0
                 current_melody = Melody(notes=[])
+
+                if current_instrument_name not in current_instrument_idx:
+                    current_instrument_idx[current_instrument_name] = 0
+                else:
+                    current_instrument_idx[current_instrument_name] += 1
+
+                if not self.dict['options'].get('voice_token', False):
+                    current_instrument_part = str(current_instrument_idx[current_instrument_name])
 
             elif key == self.INSTRUMENT_PART:
                 # Assuming that instrument part is not used directly in Melody
