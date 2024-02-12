@@ -1,8 +1,27 @@
 from musiclang_predict import MusicLangTokenizer
 from musiclang.library import *
 
+
+default_options = {
+    'chord_change_token': True,
+    'melody_end_token': True,
+    'chord_duration_token': True,
+    'density_token': True,
+    'chord_extension_token': True,
+    'next_chord_token': True,
+    'next_chord_duration_token': True,
+    'will_end_token': True,
+    'dissonance_token': True,
+    'amplitude_token': True,
+    'average_octave_token': True,
+    'voice_token': True,
+    'random_instrument_permutation': False
+}
+
 def test_tokenizer():
-    tokenizer = MusicLangTokenizer()
+
+
+    tokenizer = MusicLangTokenizer(options=default_options)
     score = (I % I.M).o(-1)(
         piano__0=s0.o(1).e + s1.e + s2,
         violin__1=s3.o(1).e + h3.e.p + s5,
