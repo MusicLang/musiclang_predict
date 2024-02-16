@@ -1,6 +1,6 @@
 from musiclang import Score
 
-def midi_file_to_template(midi_file, chord_range=None, max_instruments=8, quantization=8):
+def midi_file_to_template(midi_file, chord_range=None, max_instruments=8, quantization=(4, 3)):
     """
     Extract a song template from a midi file. It will extract the chord progression, the orchestration,
     The average density, the average amplitude, the average octave for each instrument of each bar.
@@ -48,10 +48,13 @@ def score_to_template(score, max_instruments=8):
     for data_chord in data_chords:
         data_chord['orchestration'] = data_chord['orchestration'][:max_instruments]
 
+    ts = score_prompt.config['time_signature']
+    if len(ts) == 4:
+        ts = ts[1], ts[2]
     data = {
         'tonality': tonality,
         'tempo': score_prompt.config['tempo'],
-        'time_signature': score_prompt.config['time_signature'],
+        'time_signature': ts,
         'chords': data_chords
     }
     return data

@@ -53,8 +53,8 @@ def predict_melody_from_inputs(inputs, chord_duration, instrument, model, tokeni
     if octave is not None and tokenizer.dict['options'].get('average_octave_token', False):
         octave_token = tokenizer['AVERAGE_OCTAVE__' + str(octave)]
         inputs += [octave_token]
-    if amplitude is not None and tokenizer.dict['options'].get('average_amplitude_token', False):
-        amplitude_token = tokenizer['AVERAGE_AMPLITUDE__' + str(amplitude)]
+    if amplitude is not None and tokenizer.dict['options'].get('amplitude_token', False):
+        amplitude_token = tokenizer['AMPLITUDE__' + str(amplitude)]
         inputs += [amplitude_token]
 
     nb = context_size - prompt_size
@@ -70,18 +70,18 @@ def predict_melody_from_inputs(inputs, chord_duration, instrument, model, tokeni
     if tokenizer.dict['options'].get('melody_end_token', False):
         stop_words_ids = [tokenizer['MELODY_END']]
     else:
-        stop_words_ids_instruments = [val for i, val in tokenizer.dict['token_to_id'].items() if
+        stop_words_ids_instruments = [val for i, val in tokenizer.tokenizer.vocab.items() if
                                       i.startswith('INSTRUMENT_NAME__') or i.startswith('INSTRUMENT_PART__')]
-        stop_words_ids_chords = [val for i, val in tokenizer.dict['token_to_id'].items() if i.startswith('CHORD_DEGREE__')]
+        stop_words_ids_chords = [val for i, val in tokenizer.tokenizer.vocab.items() if i.startswith('CHORD_DEGREE__')]
         stop_words_ids = stop_words_ids_instruments + stop_words_ids_chords
 
     nb = context_size - prompt_size
     instrument_name, part = instrument.split('__')
     instrument_id = tokenizer['INSTRUMENT_NAME__' + instrument_name]
-    instrument_part = tokenizer['INSTRUMENT_PART__' + str(part)]
-
-    inputs += [instrument_id, instrument_part]
-
+    inputs.append(instrument_id)
+    if tokenizer.dict['options'].get('voice_token', False):
+        instrument_part = tokenizer['INSTRUMENT_PART__' + str(part)]
+        inputs.append(instrument_part)
     # Load model
     score, inputs = model_pred_one_shot(inputs, nb, stop_words_ids, model,
                         tokenizer, chord_duration, generation_config, nb_stop_word=1, **kwargs)
@@ -154,6 +154,7 @@ def predict_with_template(template,
                                               tonality=tonality, time_signature=time_signature)
             inputs += tokenizer.tokens_to_ids(
                 tokenizer.tokenize_next_chord(next_chord.to_chord().set_duration(chord_duration)))
+
         for instrument in instruments_for_chord:
             density = instrument['density']
             octave = instrument['octave']
@@ -180,7 +181,8 @@ def predict_chords(model, tokenizer, nb_chords=4, prompt=None, temperature=0.9):
     ids = tokenizer(prompt, add_special_tokens=False, return_tensors='pt').input_ids
     nb_tokens = (nb_chords + 1 + nb_chord_init) * 6
     result = model.generate(ids, do_sample=True, temperature=temperature,
-                            max_new_tokens=nb_tokens,
+                            #max_new_tokens=nb_tokens
+                        max_length= nb_tokens, min_length=nb_tokens
                             )[0]
     seq = tokenizer.decode(result)
     score = tokenizer.untokenize(prompt + ' ' + seq)
@@ -235,7 +237,6 @@ def model_pred_one_shot(inputs, nb, stop_words_ids, model, tokenizer, chord_dura
     drums = score.get_instrument_names(['drums_0'])
     score_without_drums = score.normalize_instruments().remove_drums()
 
-
     if len(score_without_drums.instruments) > 0:
         score = score_without_drums
         fixed_parts = extract_max_density_instruments(score)
@@ -244,8 +245,8 @@ def model_pred_one_shot(inputs, nb, stop_words_ids, model, tokenizer, chord_dura
         if len(drums.instruments) > 0:
             score = score.project_on_score(drums, voice_leading=False, keep_score=True)
     score = score.remove_silenced_instruments()
-    inputs = tokenizer.tokenize_to_ids(score, include_end=False)
 
+    inputs = tokenizer.tokenize_to_ids(score, include_end=False)
     return score, inputs
 
 
@@ -285,10 +286,12 @@ def predict(model, tokenizer, prompt=None,
     generation_config = dict(
         max_new_tokens=nb,  # extends samples by nb tokens
         min_new_tokens=0,
+        min_length=0,
         do_sample=True,  # but sample instead
         temperature=temperature,
-        pad_token_id=tokenizer['END'],
+        pad_token_id=tokenizer['[PAD]'] if '[PAD]' in tokenizer.tokenizer.vocab else tokenizer['END'],
     )
+
 
     if prompt:
         chord_duration = prompt.chords[0].duration
