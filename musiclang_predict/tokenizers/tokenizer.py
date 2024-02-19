@@ -114,6 +114,7 @@ class MusicLangTokenizer:
     def __init__(self, tokenizer_path=None, options=None, hub_tokenizer_path='tokenizer-base.json'):
         self.dict = {}
         self.tokenizer = None
+        self.denoms = [i for i in range(1, NOTE_DURATION_MAX_DENOMINATOR + 1)]
         if tokenizer_path is None:
             import warnings
             warnings.warn("No tokenizer_path provided. Using a new tokenizer. You probably should train it using 'train_tokenizer_from_token_files' method.")
@@ -126,6 +127,7 @@ class MusicLangTokenizer:
                 with open(tokenizer_path_hub, 'r') as f:
                     self.dict = json.load(f)
             self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+            self.denoms = self.get_avalaible_denominators()
         # Replace str to int for keys of id_to_token
         if options is not None:
             self.dict['options'] = options
@@ -538,6 +540,13 @@ class MusicLangTokenizer:
         token_chord_duration_den = self.CHORD_DURATION_DEN + '__' + str(chord_duration.denominator)
         return [token_chord_duration_num, token_chord_duration_den]
 
+
+    def get_avalaible_denominators(self):
+        if self.tokenizer is not None:
+            words = self.tokenizer.vocab
+            self.denoms = [int(w.split('__')[1]) for w in words if 'NOTE_DURATION_DEN' in w]
+        return self.denoms
+
     def tokenize_note(self, note):
         note_type = self.NOTE_TYPE + '__' + note.type
         note_degree = self.NOTE_VAL + '__' + str(note.val)
@@ -546,7 +555,7 @@ class MusicLangTokenizer:
 
         # Limit denominator of duration to 4
         note_duration = frac(note.duration).limit_denominator(NOTE_DURATION_MAX_DENOMINATOR)
-        available_denominators = [1, 2, 4, 8]
+        available_denominators = self.denoms
         note_duration_den = min(available_denominators, key=lambda x: abs(note_duration.denominator - x))
 
         if note_duration.numerator == 0:
