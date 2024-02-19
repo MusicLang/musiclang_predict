@@ -65,7 +65,8 @@ default_options = {
     'average_octave_token': True,
     'voice_token': False,
     'random_instrument_permutation': True,
-    'end_token': True
+    'end_token': True,
+    'silence_continuation_eco': True
 }
 class MusicLangTokenizer:
     """
@@ -557,7 +558,6 @@ class MusicLangTokenizer:
         note_duration = frac(note.duration).limit_denominator(NOTE_DURATION_MAX_DENOMINATOR)
         available_denominators = self.denoms
         note_duration_den = min(available_denominators, key=lambda x: abs(note_duration.denominator - x))
-
         if note_duration.numerator == 0:
             return []
 
@@ -566,7 +566,12 @@ class MusicLangTokenizer:
         note_duration_num = self.NOTE_DURATION_NUM + '__' + str(note_duration.numerator)
         note_duration_den = self.NOTE_DURATION_DEN + '__' + str(note_duration.denominator)
         # Create the list
-        tokens = [note_type, note_degree, note_octave, note_amp, note_duration_num, note_duration_den]
+        tokens = [note_type]
+        if (note.type not in ['r', 'l']) or not self.dict['options'].get('silence_continuation_eco', False):
+            tokens += [note_degree, note_octave, note_amp]
+
+        tokens += [note_duration_num, note_duration_den]
+
         return tokens
 
     def tokenize_chord(self, chord, only_chords=False):
@@ -637,6 +642,10 @@ class MusicLangTokenizer:
         current_melody_duration = 0
         note_duration_num = 0
         note_duration_den = 0
+        note_val = 0
+        note_type = 'r'
+        note_octave = 0
+        note_amp = 'mf'
 
         current_instrument_idx = {}
 
