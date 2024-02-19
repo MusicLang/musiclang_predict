@@ -3,6 +3,8 @@ import copy
 from musiclang import Score, Chord, Note, Melody, Tonality
 import os
 import tempfile
+import os
+
 import json
 from fractions import Fraction as frac
 import joblib
@@ -14,20 +16,20 @@ from tqdm import tqdm
 import gc
 from fractions import Fraction as frac
 
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from tokenizers import Tokenizer, models, trainers
+
+from transformers import AutoTokenizer, AutoModelForCausalLM, PreTrainedTokenizerFast
 from tokenizers import Tokenizer
 from tokenizers.models import WordLevel
-from tokenizers.pre_tokenizers import Whitespace, WhitespaceSplit
-from tokenizers.processors import TemplateProcessing
+from tokenizers.pre_tokenizers import WhitespaceSplit
 from tokenizers.trainers import WordLevelTrainer
-from tokenizers.pre_tokenizers import PreTokenizer
 
 
-
+from musiclang_predict.tokenizers.bpe_iterator import BPEIterator
 
 NOTE_DURATION_MAX_DENOMINATOR = 8
 CHORD_DURATION_MAX_DENOMINATOR = 4
-
+BASE_CHAR_ID = 33
 TOKENIZER_CONFIG_BASE = {
   "model_max_len": 4096,
   "model_max_length": 4096,
@@ -188,6 +190,21 @@ class MusicLangTokenizer:
         inv_dict = {idx: token for idx, token in enumerate(unique_tokens)}
         self.dict = {'options': self.dict['options']}
 
+
+    def tokenize_from_file(self, path):
+        """
+        Tokenize a file and returns a list of tokens
+        Parameters
+        ----------
+        path: str, path to file
+
+        Returns
+        -------
+        tokens: List[str], list of tokens
+        """
+        with open(path, 'r') as f:
+            tokens = f.read().split()
+        return tokens
 
     def tokenize_sequence(self, seq):
         """
@@ -392,6 +409,91 @@ class MusicLangTokenizer:
 
         return res_with_tokenizer['input_ids']
 
+
+    def train_bpe(self, files_paths, output_dir=None, hub_path=None, vocab_size=30_000):
+        """
+        :param files_paths: list of str
+        Tokens text files paths
+        :param output_dir: Output of the BPE model, if None, a temporary directory will be created
+        :param hub_path: str
+        Path to the hub where to push the tokenizer
+        :param vocab_size: int
+        Number of tokens in the BPE model
+        :return:
+        """
+        # Initialize the BPEIterator with your custom tokenizer and list of file paths
+        control_tokens = self.get_control_tokens_bytes()
+        bpe_iterator = BPEIterator(self, files_paths, control_tokens=control_tokens)
+
+        # Initialize the Hugging Face tokenizer with a BPE model
+        tokenizer = Tokenizer(models.BPE())
+
+        # Initialize the BPE trainer
+        trainer = trainers.BpeTrainer(vocab_size=vocab_size)
+
+        # Train the tokenizer using the BPEIterator
+        tokenizer.train_from_iterator(bpe_iterator, trainer=trainer)
+
+        # Save the trained tokenizer
+        file = "tokenizer.json"
+        delete_temp_dir = False
+        if output_dir is None:
+            output_dir = tempfile.mkdtemp()
+            delete_temp_dir = True
+
+        tokenizer_file = os.path.join(output_dir, file)
+        tokenizer.save(tokenizer_file)
+        tokenizer = Tokenizer.from_file(tokenizer_file)
+        tokenizer.model.save(output_dir)
+
+        if hub_path is not None:
+            tokenizer = PreTrainedTokenizerFast(tokenizer_file=tokenizer_file, model_max_length=self.tokenizer.model_max_length)
+            tokenizer.push_to_hub(hub_path)
+
+        # Delete the temporary directory
+        if delete_temp_dir:
+            import shutil
+            shutil.rmtree(output_dir)
+
+        # Push to hub
+
+        return tokenizer
+
+
+    def tokens_to_bytes(self, tokens, as_one_str=True):
+        if not isinstance(tokens, str):
+            tokens = " ".join(tokens)
+        ids = self.tokenizer(tokens)['input_ids']
+        bytes_ids = [chr(i + BASE_CHAR_ID) for i in ids]
+        if as_one_str:
+            return ''.join(bytes_ids)
+        return bytes_ids
+
+
+    def get_control_tokens(self):
+        """
+        Get all the tokens that are control tokens and that should not be part of BPE merges
+        :return:
+        """
+
+        # Control tokens are all tokens that are not note tokens
+        control_tokens = [voc for voc in self.tokenizer.vocab.keys() if not voc.startswith('NOTE_')]
+        return control_tokens
+
+    def get_control_tokens_bytes(self):
+        """
+        Get all the tokens that looks like control tokens
+        :return:
+        """
+        # Control tokens are all tokens that are not note tokens
+        control_tokens = [chr(i + BASE_CHAR_ID) for i in self.tokenizer.vocab.values() if not self.tokenizer.decode(i).startswith('NOTE_')]
+        return control_tokens
+
+    def bytes_to_tokens(self, bytes, to_str=True):
+        ids = [ord(b) - BASE_CHAR_ID for b in bytes]
+        result = self.ids_to_tokens(ids)
+        if to_str:
+            return " ".join(result)
 
     def save(self, filepath):
         with open(filepath, 'w') as f:
