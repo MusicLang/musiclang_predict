@@ -227,7 +227,7 @@ class MusicLangTokenizer:
 
 
         def train_tokenizer(data_files, vocab_size=30_000,
-                            special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]", "[START]"]):
+                            special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]", "[START]", "[END]"]):
             # Create a tokenizer
             tokenizer = Tokenizer(WordLevel(unk_token="[UNK]"))
             # Pre-tokenizer to split the text into words
