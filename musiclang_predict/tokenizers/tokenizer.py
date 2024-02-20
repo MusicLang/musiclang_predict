@@ -410,7 +410,7 @@ class MusicLangTokenizer:
         return res_with_tokenizer['input_ids']
 
 
-    def train_bpe(self, files_paths, output_dir=None, hub_path=None, vocab_size=30_000):
+    def train_bpe(self, files_paths, output_dir=None, hub_path=None, vocab_size=30_000, type='sentence_piece'):
         """
         :param files_paths: list of str
         Tokens text files paths
@@ -419,20 +419,27 @@ class MusicLangTokenizer:
         Path to the hub where to push the tokenizer
         :param vocab_size: int
         Number of tokens in the BPE model
+        :param type: str (sentence_piece or bpe)
         :return:
         """
+
+
+        from tokenizers import SentencePieceBPETokenizer
+
         # Initialize the BPEIterator with your custom tokenizer and list of file paths
         control_tokens = self.get_control_tokens_bytes()
         bpe_iterator = BPEIterator(self, files_paths, control_tokens=control_tokens)
 
         # Initialize the Hugging Face tokenizer with a BPE model
-        tokenizer = Tokenizer(models.BPE())
-
-        # Initialize the BPE trainer
-        trainer = trainers.BpeTrainer(vocab_size=vocab_size, show_progress=True, max_token_length=32)
-
-        # Train the tokenizer using the BPEIterator
-        tokenizer.train_from_iterator(bpe_iterator, trainer=trainer)
+        if type == 'sentence_piece':
+            tokenizer = SentencePieceBPETokenizer()
+            tokenizer.train_from_iterator(bpe_iterator, vocab_size=vocab_size, show_progress=True)
+        elif type == 'bpe':
+            tokenizer = Tokenizer(models.BPE())
+            trainer = trainers.BpeTrainer(vocab_size=vocab_size, show_progress=True, max_token_length=32)
+            tokenizer.train_from_iterator(bpe_iterator, trainer=trainer)
+        else:
+            raise ValueError(f"Invalid type {type}, must be 'sentence_piece' or 'bpe'")
 
         # Save the trained tokenizer
         file = "tokenizer.json"
