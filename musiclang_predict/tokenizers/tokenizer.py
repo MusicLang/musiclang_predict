@@ -429,7 +429,7 @@ class MusicLangTokenizer:
         tokenizer = Tokenizer(models.BPE())
 
         # Initialize the BPE trainer
-        trainer = trainers.BpeTrainer(vocab_size=vocab_size, show_progress=True)
+        trainer = trainers.BpeTrainer(vocab_size=vocab_size, show_progress=True, max_token_length=32)
 
         # Train the tokenizer using the BPEIterator
         tokenizer.train_from_iterator(bpe_iterator, trainer=trainer)
