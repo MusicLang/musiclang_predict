@@ -31,8 +31,6 @@ class BPEIterator:
         with open(path, 'r') as f:
             text = f.read()
 
-        token_ids = self.tokenizer.tokenizer(text)
-
         # list of str (bytes)
         bytes_ = self.tokenizer.tokens_to_bytes(text)
 
