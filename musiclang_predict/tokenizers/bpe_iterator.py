@@ -33,6 +33,7 @@ class BPEIterator:
 
         # list of str (bytes)
         bytes_ = self.tokenizer.tokens_to_bytes(text)
+        bytes_ = bytes_[:8000]
 
         # Split
         split_pattern = '|'.join([re.escape(token) for token in self.control_tokens])
