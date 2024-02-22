@@ -432,9 +432,10 @@ class MusicLangTokenizer:
 
         # Initialize the Hugging Face tokenizer with a BPE model
         if type == 'sentence_piece':
-            tokenizer = SentencePieceBPETokenizer()
-            tokenizer.normalizer = None
-            tokenizer.train_from_iterator(bpe_iterator, vocab_size=vocab_size, show_progress=True)
+            tokenizer = SentencePieceBPETokenizer(add_prefix_space = False)
+            tokenizer.enable_padding(pad_id=1, pad_token="<pad>")
+            tokenizer.normalizer = normalizers.Sequence([])
+            tokenizer.train_from_iterator(bpe_iterator, special_tokens=['<unk>', '<pad>', '<bos>', '<eos>', '<mask>'], vocab_size=vocab_size, show_progress=True)
         elif type == 'bpe':
             tokenizer = Tokenizer(models.BPE())
             trainer = trainers.BpeTrainer(vocab_size=vocab_size, show_progress=True, max_token_length=32)
