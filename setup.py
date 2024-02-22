@@ -6,7 +6,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setuptools.setup(
     name="musiclang-predict",
-    version="0.4.0",
+    version="0.5.0",
     author="Florian GARDIN",
     author_email="fgardin.pro@gmail.com",
     description=("A python package for music generation using gen AI"
