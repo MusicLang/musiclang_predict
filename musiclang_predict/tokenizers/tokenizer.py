@@ -425,7 +425,7 @@ class MusicLangTokenizer:
 
 
         from tokenizers import SentencePieceBPETokenizer
-
+        from tokenizers import normalizers
         # Initialize the BPEIterator with your custom tokenizer and list of file paths
         control_tokens = self.get_control_tokens_bytes()
         bpe_iterator = BPEIterator(self, files_paths, control_tokens=control_tokens)
@@ -433,6 +433,7 @@ class MusicLangTokenizer:
         # Initialize the Hugging Face tokenizer with a BPE model
         if type == 'sentence_piece':
             tokenizer = SentencePieceBPETokenizer()
+            tokenizer.normalizer = None
             tokenizer.train_from_iterator(bpe_iterator, vocab_size=vocab_size, show_progress=True)
         elif type == 'bpe':
             tokenizer = Tokenizer(models.BPE())
