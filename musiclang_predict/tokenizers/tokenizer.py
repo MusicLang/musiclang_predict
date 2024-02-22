@@ -3,6 +3,8 @@ import copy
 from musiclang import Score, Chord, Note, Melody, Tonality
 import os
 import tempfile
+import os
+
 import json
 from fractions import Fraction as frac
 import joblib
@@ -14,21 +16,20 @@ from tqdm import tqdm
 import gc
 from fractions import Fraction as frac
 
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from tokenizers import Tokenizer, models, trainers
+
+from transformers import AutoTokenizer, AutoModelForCausalLM, PreTrainedTokenizerFast
 from tokenizers import Tokenizer
 from tokenizers.models import WordLevel
-from tokenizers.pre_tokenizers import Whitespace, WhitespaceSplit
-from tokenizers.processors import TemplateProcessing
+from tokenizers.pre_tokenizers import WhitespaceSplit
 from tokenizers.trainers import WordLevelTrainer
-from tokenizers.pre_tokenizers import PreTokenizer
 
 
-import tempfile
-
+from musiclang_predict.tokenizers.bpe_iterator import BPEIterator
 
 NOTE_DURATION_MAX_DENOMINATOR = 8
 CHORD_DURATION_MAX_DENOMINATOR = 4
-
+BASE_CHAR_ID = 33
 TOKENIZER_CONFIG_BASE = {
   "model_max_len": 4096,
   "model_max_length": 4096,
@@ -59,10 +60,15 @@ default_options = {
     'density_token': True,
     'chord_extension_token': True,
     'next_chord_token': True,
+    'next_chord_duration_token': True,
     'will_end_token': True,
     'dissonance_token': True,
     'amplitude_token': True,
-    'average_octave_token': True
+    'average_octave_token': True,
+    'voice_token': False,
+    'random_instrument_permutation': True,
+    'end_token': True,
+    'silence_continuation_eco': True
 }
 class MusicLangTokenizer:
     """
@@ -110,18 +116,22 @@ class MusicLangTokenizer:
 
     def __init__(self, tokenizer_path=None, options=None, hub_tokenizer_path='tokenizer-base.json'):
         self.dict = {}
-        if tokenizer_path is not None:
+        self.tokenizer = None
+        self.denoms = [i for i in range(1, NOTE_DURATION_MAX_DENOMINATOR + 1)]
+        if tokenizer_path is None:
+            import warnings
+            warnings.warn("No tokenizer_path provided. Using a new tokenizer. You probably should train it using 'train_tokenizer_from_token_files' method.")
+        else:
             try:
                 with open(tokenizer_path, 'r') as f:
                     self.dict = json.load(f)
             except Exception as e:
-                tokenizer_path = hf_hub_download(repo_id=tokenizer_path, filename=hub_tokenizer_path)
-                with open(tokenizer_path, 'r') as f:
+                tokenizer_path_hub = hf_hub_download(repo_id=tokenizer_path, filename=hub_tokenizer_path)
+                with open(tokenizer_path_hub, 'r') as f:
                     self.dict = json.load(f)
-
-            # Replace str to int for keys of id_to_token
-            self.dict['id_to_token'] = {int(k): v for k, v in self.dict['id_to_token'].items()}
-
+            self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+            self.denoms = self.get_avalaible_denominators()
+        # Replace str to int for keys of id_to_token
         if options is not None:
             self.dict['options'] = options
         elif 'options' not in self.dict:
@@ -129,13 +139,13 @@ class MusicLangTokenizer:
 
     @property
     def vocab_size(self):
-        return len(self.dict.get('token_to_id', {}))
+        return len(self.tokenizer.vocab_size)
 
     def __getitem__(self, item):
         if isinstance(item, str):
-            return self.dict['token_to_id'][item]
+            return self.tokenizer.vocab[item]
         elif isinstance(item, int):
-            return self.dict['id_to_token'][item]
+            return self.tokenizer.decode(item)
         else:
             raise ValueError(f"Invalid type {type(item)} for item {item}")
 
@@ -178,8 +188,23 @@ class MusicLangTokenizer:
         unique_tokens = list(sorted(list(unique_tokens)))
         dict = {token: idx for idx, token in enumerate(unique_tokens)}
         inv_dict = {idx: token for idx, token in enumerate(unique_tokens)}
-        self.dict = {'token_to_id': dict, 'id_to_token': inv_dict, 'options': self.dict['options']}
+        self.dict = {'options': self.dict['options']}
 
+
+    def tokenize_from_file(self, path):
+        """
+        Tokenize a file and returns a list of tokens
+        Parameters
+        ----------
+        path: str, path to file
+
+        Returns
+        -------
+        tokens: List[str], list of tokens
+        """
+        with open(path, 'r') as f:
+            tokens = f.read().split()
+        return tokens
 
     def tokenize_sequence(self, seq):
         """
@@ -200,7 +225,11 @@ class MusicLangTokenizer:
 
     def train_tokenizer_from_token_files(self, token_files, output=None, hub_output=None, **kwargs):
         """
-        Train a tokenizer from a list of token files
+        Train a tokenizer from a list of token files.
+        It will also save a tokenizer-base.json file with the options used to train the tokenizer
+        (needed for tokenization from musiclang language)
+
+        Make sure you have logged in to huggingface using `huggingface-cli login` before training and pushing to the hub
         Parameters
         ----------
         token_files:
@@ -215,7 +244,7 @@ class MusicLangTokenizer:
 
 
         def train_tokenizer(data_files, vocab_size=30_000,
-                            special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]", "[START]"]):
+                            special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]", "[START]", "[END]"]):
             # Create a tokenizer
             tokenizer = Tokenizer(WordLevel(unk_token="[UNK]"))
             # Pre-tokenizer to split the text into words
@@ -251,14 +280,36 @@ class MusicLangTokenizer:
             tokenizer = AutoTokenizer.from_pretrained(tmpdirname)
             if output is not None:
                 tokenizer.save_pretrained(output)
+                # Save base options
+                with open(os.path.join(output, 'tokenizer-base.json'), 'w') as f:
+                    json.dump({"options": self.dict['options']}, f, indent=4)
             if hub_output is not None:
                 tokenizer.push_to_hub(hub_output)
+                # Push base options to hub (1. save to a tempfile, 2. then use hf api to push to hub)
+                with tempfile.TemporaryDirectory() as tmpdirname:
+                    with open(os.path.join(tmpdirname, 'tokenizer-base.json'), 'w') as f:
+                        json.dump({"options":  self.dict['options']}, f, indent=4)
+                    from huggingface_hub import HfApi
+                    hf_api = HfApi()
+                    hf_api.upload_file(
+                        path_or_fileobj=os.path.join(tmpdirname, 'tokenizer-base.json'),
+                        path_in_repo="tokenizer-base.json",
+                        repo_id=hub_output,
+                        repo_type="model",
+                    )
+
             if output is None and hub_output is None:
                 # Raise ONLY a warning
                 print("WARNING: hub_output is None, tokenizer not pushed to hub")
 
         return tokenizer
 
+    def __call__(self, score, **kwargs):
+        tokens = " ".join(self.tokenize(score))
+        return self.tokenizer(tokens, **kwargs)
+
+    def decode(self, *args, **kwargs):
+        return self.tokenizer.decode(*args, **kwargs)
 
     def tokenize_chords(self, score):
         return self.tokenize(score, only_chords=True)
@@ -274,7 +325,7 @@ class MusicLangTokenizer:
         -------
 
         """
-        return [self.dict['id_to_token'][id] for id in ids]
+        return self.tokenizer.convert_ids_to_tokens(ids)
 
     def ids_to_score(self, ids):
         """
@@ -352,56 +403,104 @@ class MusicLangTokenizer:
         -------
 
         """
-        return [self.dict['token_to_id'][token] for token in tokens]
+        if self.tokenizer is None:
+            raise ValueError("No tokens to ids available. You must train the tokenizer first using train_tokenizer_from_token_files method.")
+        res_with_tokenizer = self.tokenizer(" ".join(tokens))
+
+        return res_with_tokenizer['input_ids']
 
 
-
-    def train(self, midi_files, output, num_processes=8, resume=True, interceptors=None, **kwargs):
+    def train_bpe(self, files_paths, output_dir=None, hub_path=None, vocab_size=30_000, type='sentence_piece'):
         """
-        Train a tokenizer on a list of midi files, and save the tokens ids to files
-        Parameters
-        ----------
-        midi_files
-
-        Returns
-        -------
+        :param files_paths: list of str
+        Tokens text files paths
+        :param output_dir: Output of the BPE model, if None, a temporary directory will be created
+        :param hub_path: str
+        Path to the hub where to push the tokenizer
+        :param vocab_size: int
+        Number of tokens in the BPE model
+        :param type: str (sentence_piece or bpe)
+        :return:
         """
-        output_tokens = os.path.join(output, 'tokens')
-        output_tokenizer = os.path.join(output, 'tokenizer.json')
-        output_ids = os.path.join(output, 'ids')
-        # Create directories
-        os.makedirs(output_tokens, exist_ok=True)
-        os.makedirs(output_ids, exist_ok=True)
 
-        if num_processes > 1:
-            if resume:
-                # Filter midi files that have already been tokenized
-                token_files = [os.path.join(output_tokens, f) for f in os.listdir(output_tokens)]
-                token_files = set(token_files)
-                midi_files = [midi_file for midi_file in midi_files if os.path.join(output_tokens, os.path.basename(midi_file).replace('.mid', '.txt')) not in token_files]
 
-            self.tokenize_to_files(midi_files, output_tokens, num_processes=num_processes, interceptors=interceptors, **kwargs)
+        from tokenizers import SentencePieceBPETokenizer
+
+        # Initialize the BPEIterator with your custom tokenizer and list of file paths
+        control_tokens = self.get_control_tokens_bytes()
+        bpe_iterator = BPEIterator(self, files_paths, control_tokens=control_tokens)
+
+        # Initialize the Hugging Face tokenizer with a BPE model
+        if type == 'sentence_piece':
+            tokenizer = SentencePieceBPETokenizer()
+            tokenizer.train_from_iterator(bpe_iterator, vocab_size=vocab_size, show_progress=True)
+        elif type == 'bpe':
+            tokenizer = Tokenizer(models.BPE())
+            trainer = trainers.BpeTrainer(vocab_size=vocab_size, show_progress=True, max_token_length=32)
+            tokenizer.train_from_iterator(bpe_iterator, trainer=trainer)
         else:
-            self.tokenize_to_files_single(midi_files, output_tokens, **kwargs)
-        token_files = [os.path.join(output_tokens, f) for f in os.listdir(output_tokens)]
-        self.calculate_tokens_to_ids_dict(token_files)
-        # Convert all tokens to ids and save to files
-        # Create directory
-        os.makedirs(output_ids, exist_ok=True)
-        for token_file in tqdm(token_files, 'Saving tokens ids to files'):
-            with open(token_file, 'r') as f:
-                tokens = f.read().split('\n')
-                tokens_ids = self.tokens_to_ids(tokens)
-                filename = os.path.basename(token_file)
-                # Replace extension to .npy
-                filename = filename.replace('.txt', '.npy')
-                output_file = os.path.join(output_ids, filename)
-                # Save as numpy array
-                joblib.dump(np.asarray(tokens_ids, dtype=np.int16), output_file)
+            raise ValueError(f"Invalid type {type}, must be 'sentence_piece' or 'bpe'")
 
-        with open(output_tokenizer, 'w') as f:
-            json.dump(self.dict, f, indent=4)
+        # Save the trained tokenizer
+        file = "tokenizer.json"
+        delete_temp_dir = False
+        if output_dir is None:
+            output_dir = tempfile.mkdtemp()
+            delete_temp_dir = True
 
+        tokenizer_file = os.path.join(output_dir, file)
+        tokenizer.save(tokenizer_file)
+        tokenizer = Tokenizer.from_file(tokenizer_file)
+        tokenizer.model.save(output_dir)
+
+        if hub_path is not None:
+            tokenizer = PreTrainedTokenizerFast(tokenizer_file=tokenizer_file, model_max_length=self.tokenizer.model_max_length)
+            tokenizer.push_to_hub(hub_path)
+
+        # Delete the temporary directory
+        if delete_temp_dir:
+            import shutil
+            shutil.rmtree(output_dir)
+
+        # Push to hub
+
+        return tokenizer
+
+
+    def tokens_to_bytes(self, tokens, as_one_str=True):
+        if not isinstance(tokens, str):
+            tokens = " ".join(tokens)
+        ids = self.tokenizer(tokens)['input_ids']
+        bytes_ids = [chr(i + BASE_CHAR_ID) for i in ids]
+        if as_one_str:
+            return ''.join(bytes_ids)
+        return bytes_ids
+
+
+    def get_control_tokens(self):
+        """
+        Get all the tokens that are control tokens and that should not be part of BPE merges
+        :return:
+        """
+
+        # Control tokens are all tokens that are not note tokens
+        control_tokens = [voc for voc in self.tokenizer.vocab.keys() if not voc.startswith('NOTE_')]
+        return control_tokens
+
+    def get_control_tokens_bytes(self):
+        """
+        Get all the tokens that looks like control tokens
+        :return:
+        """
+        # Control tokens are all tokens that are not note tokens
+        control_tokens = [chr(i + BASE_CHAR_ID) for i in self.tokenizer.vocab.values() if not self.tokenizer.decode(i).startswith('NOTE_')]
+        return control_tokens
+
+    def bytes_to_tokens(self, bytes, to_str=True):
+        ids = [ord(b) - BASE_CHAR_ID for b in bytes]
+        result = self.ids_to_tokens(ids)
+        if to_str:
+            return " ".join(result)
 
     def save(self, filepath):
         with open(filepath, 'w') as f:
@@ -483,7 +582,13 @@ class MusicLangTokenizer:
         else:
             return 'very_high'
 
-    def tokenize(self, score, only_chords=False):
+    def tokenize(self, score, only_chords=False, for_prompt=False):
+        if self.dict['options'].get('random_instrument_permutation', False):
+            import random
+            instruments = score.instruments
+            random.shuffle(instruments)
+            sort_dict = {ins: idx for idx, ins in enumerate(instruments)}
+
         if isinstance(score, Chord):
             score = Score(chords=[score])
         tokens = []
@@ -501,14 +606,23 @@ class MusicLangTokenizer:
                     tokens_next_chord = self.tokenize_next_chord(next_chord)
                     tokens += tokens_next_chord
                 else:
-                    tokens += [self.WILL_END]
+                    if self.dict['options'].get('will_end_token', True):
+                        tokens += [self.WILL_END]
 
             if not only_chords:
-                for ins, melody in chord.score.items():
+
+                if self.dict['options'].get('random_instrument_permutation', False):
+                    items = sorted(chord.score.items(), key=lambda x: sort_dict[x[0]])
+                else:
+                    items = chord.score.items()
+
+                for ins, melody in items:
                     ins_name, ins_part = ins.split('__')
                     tokens_ins_name = self.INSTRUMENT_NAME + '__' + ins_name
-                    tokens_ins_part = self.INSTRUMENT_PART + '__' + ins_part
-                    tokens += [tokens_ins_name, tokens_ins_part]
+                    tokens.append(tokens_ins_name)
+                    if self.dict['options'].get('voice_token', True):
+                        tokens_ins_part = self.INSTRUMENT_PART + '__' + ins_part
+                        tokens.append(tokens_ins_part)
                     if self.dict['options'].get('density_token', False):
                         instrument_density = densities[ins]
                         density_str = self.density_to_density_str(instrument_density)
@@ -525,7 +639,9 @@ class MusicLangTokenizer:
                         tokens += tokens_note
                     if self.dict['options'].get('melody_end_token', False):
                         tokens.append(self.MELODY_END)
-        tokens.append(self.END)
+
+        if self.dict['options'].get('end_token', True):
+            tokens.append(self.END)
 
         return tokens
 
@@ -533,6 +649,13 @@ class MusicLangTokenizer:
         token_chord_duration_num = self.CHORD_DURATION_NUM + '__' + str(chord_duration.numerator)
         token_chord_duration_den = self.CHORD_DURATION_DEN + '__' + str(chord_duration.denominator)
         return [token_chord_duration_num, token_chord_duration_den]
+
+
+    def get_avalaible_denominators(self):
+        if self.tokenizer is not None:
+            words = self.tokenizer.vocab
+            self.denoms = [int(w.split('__')[1]) for w in words if 'NOTE_DURATION_DEN' in w]
+        return self.denoms
 
     def tokenize_note(self, note):
         note_type = self.NOTE_TYPE + '__' + note.type
@@ -542,11 +665,22 @@ class MusicLangTokenizer:
 
         # Limit denominator of duration to 4
         note_duration = frac(note.duration).limit_denominator(NOTE_DURATION_MAX_DENOMINATOR)
+        available_denominators = self.denoms
+        note_duration_den = min(available_denominators, key=lambda x: abs(note_duration.denominator - x))
+        if note_duration.numerator == 0:
+            return []
 
+        # Find best approximation using denominator
+        note_duration = frac(note_duration.numerator, note_duration_den)
         note_duration_num = self.NOTE_DURATION_NUM + '__' + str(note_duration.numerator)
         note_duration_den = self.NOTE_DURATION_DEN + '__' + str(note_duration.denominator)
         # Create the list
-        tokens = [note_type, note_degree, note_octave, note_amp, note_duration_num, note_duration_den]
+        tokens = [note_type]
+        if (note.type not in ['r', 'l']) or not self.dict['options'].get('silence_continuation_eco', False):
+            tokens += [note_degree, note_octave, note_amp]
+
+        tokens += [note_duration_num, note_duration_den]
+
         return tokens
 
     def tokenize_chord(self, chord, only_chords=False):
@@ -563,10 +697,10 @@ class MusicLangTokenizer:
         # Create the list
         tokens += [chord_degree, tonality_degree, tonality_mode, chord_octave]
 
-        if self.dict['options']['chord_extension_token']:
+        if self.dict['options'].get('chord_extension_token', False):
             tokens += [chord_extension]
 
-        if self.dict['options']['chord_duration_token'] and not only_chords:
+        if self.dict['options'].get('chord_duration_token', False) and not only_chords:
             chord_duration = frac(chord.duration).limit_denominator(CHORD_DURATION_MAX_DENOMINATOR)
             chord_duration_num = self.CHORD_DURATION_NUM + '__' + str(chord_duration.numerator)
             chord_duration_den = self.CHORD_DURATION_DEN + '__' + str(chord_duration.denominator)
@@ -584,9 +718,10 @@ class MusicLangTokenizer:
 
         tokens += [chord_degree, tonality_degree, tonality_mode, chord_octave]
 
-        if self.dict['options']['chord_duration_token']:
-            chord_duration_num = self.NEXT_CHORD_DURATION_NUM + '__' + str(chord.duration.numerator)
-            chord_duration_den = self.NEXT_CHORD_DURATION_DEN + '__' + str(chord.duration.denominator)
+        if self.dict['options'].get('next_chord_duration_token', True):
+            chord_duration = frac(chord.duration).limit_denominator(CHORD_DURATION_MAX_DENOMINATOR)
+            chord_duration_num = self.NEXT_CHORD_DURATION_NUM + '__' + str(chord_duration.numerator)
+            chord_duration_den = self.NEXT_CHORD_DURATION_DEN + '__' + str(chord_duration.denominator)
             tokens += [chord_duration_num, chord_duration_den]
 
         if self.dict['options']['chord_extension_token']:
@@ -616,6 +751,12 @@ class MusicLangTokenizer:
         current_melody_duration = 0
         note_duration_num = 0
         note_duration_den = 0
+        note_val = 0
+        note_type = 'r'
+        note_octave = 0
+        note_amp = 'mf'
+
+        current_instrument_idx = {}
 
         for token in tokens:
             # Split token into key and value
@@ -636,12 +777,16 @@ class MusicLangTokenizer:
                 current_chord.score[current_instrument_name + '__' + current_instrument_part] = current_melody
                 continue
 
-            key, value = token.split('__')
+            try:
+                key, value = token.split('__')
+            except:
+                raise ValueError(f"Invalid token {token}")
 
             if key == self.CHORD_DEGREE:
                 if current_chord is not None:
                     score.chords.append(current_chord)
                 current_chord = Chord(element=int(value), tonality=Tonality(0, 'M'))
+                current_instrument_idx = {}
 
             elif key == self.CHORD_OCTAVE:
                 current_chord.octave = int(value)
@@ -668,6 +813,14 @@ class MusicLangTokenizer:
                 note_duration_num = 0
                 note_duration_den = 0
                 current_melody = Melody(notes=[])
+
+                if current_instrument_name not in current_instrument_idx:
+                    current_instrument_idx[current_instrument_name] = 0
+                else:
+                    current_instrument_idx[current_instrument_name] += 1
+
+                if not self.dict['options'].get('voice_token', False):
+                    current_instrument_part = str(current_instrument_idx[current_instrument_name])
 
             elif key == self.INSTRUMENT_PART:
                 # Assuming that instrument part is not used directly in Melody

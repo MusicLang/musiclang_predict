@@ -3,7 +3,6 @@ MusicLang Predict
 
 ![MusicLang logo](https://github.com/MusicLang/musiclang/blob/main/documentation/images/MusicLang.png?raw=true "MusicLang")
 
-
 MusicLang Predict is a tool to create original midi soundtracks with generative AI model.
 It can be used for different use cases :
 - Predict a new song from scratch (a fixed number of bars)
@@ -27,7 +26,6 @@ Install the musiclang-predict package with pip :
 pip install musiclang-predict
 ```
 
-
 How to use ? 
 ------------
 
@@ -40,7 +38,7 @@ from transformers import GPT2LMHeadModel
 # Load model and tokenizer
 model = GPT2LMHeadModel.from_pretrained('musiclang/musiclang-4k')
 tokenizer = MusicLangTokenizer('musiclang/musiclang-4k')
-soundtrack = predict(model, tokenizer, chord_duration=4, nb_chords=8)
+soundtrack = predict(model, tokenizer, chord_duration=4, nb_chords=4, temperature=1.0)
 soundtrack.to_midi('song.mid', tempo=120, time_signature=(4, 4))
 ```
 
@@ -54,7 +52,7 @@ model = GPT2LMHeadModel.from_pretrained('musiclang/musiclang-4k')
 tokenizer = MusicLangTokenizer('musiclang/musiclang-4k')
 
 template = midi_file_to_template('my_song.mid')
-soundtrack = predict_with_template(template, model, tokenizer)
+soundtrack = predict_with_template(template, model, tokenizer, temperature=1.0)
 soundtrack.to_midi('song.mid', tempo=template['tempo'], time_signature=template['time_signature'])
 ```
 
@@ -77,12 +75,12 @@ template = midi_file_to_template('my_song.mid')
 # Take the first chord of the template as a prompt
 prompt = Score.from_midi('my_prompt.mid', chord_range=(0, 4))
 soundtrack = predict_with_template(template, model, tokenizer, 
+                                   temperature=1.0,
                                    prompt=prompt,  # Prompt the model with a musiclang score
                                    prompt_included_in_template=True  # To say the prompt score is included in the template
                                    )
 soundtrack.to_midi('song.mid', tempo=template['tempo'], time_signature=template['time_signature'])
 ```
-
 
 4. Chord prediction with a transformer model
 
@@ -95,8 +93,8 @@ from musiclang.library import *
 
 # Load model and tokenizer
 model = AutoModelForCausalLM.from_pretrained('musiclang/musiclang-chord-v2-4k')
-tokenizer = AutoTokenizer.from_pretrained('musiclang/musiclang-chord-v2-4k')
-soundtrack = predict_chords(model, tokenizer, nb_chords=4)
+tokenizer = MusicLangTokenizer('musiclang/musiclang-chord-v2-4k')
+soundtrack = predict_chords(model, tokenizer, nb_chords=4, temperature=1.0)
 
 # Give the chord a simple voicing (closed position chord)
 soundtrack = soundtrack(b0, b1, b2, b3)
@@ -116,15 +114,14 @@ prompt = (I % I.M) + (V % I.M)['6'].o(-1)
 
 # Load model and tokenizer
 model = AutoModelForCausalLM.from_pretrained('musiclang/musiclang-chord-v2-4k')
-tokenizer = AutoTokenizer.from_pretrained('musiclang/musiclang-chord-v2-4k')
-soundtrack = predict_chords(model, tokenizer, nb_chords=4, prompt=prompt)
+tokenizer = MusicLangTokenizer('musiclang/musiclang-chord-v2-4k')
+soundtrack = predict_chords(model, tokenizer, nb_chords=4, prompt=prompt, temperature=1.0)
 
 # Give the chord a simple voicing (closed position chord)
 soundtrack = soundtrack(b0, b1, b2, b3)
 
 # Save it to midi
 soundtrack.to_midi('song.mid', tempo=120, time_signature=(4, 4))
-
 ```
 
 Contact us
@@ -136,5 +133,9 @@ please contact [us](mailto:fgardin.pro@gmail.com)
 License
 -------
 
-The MusicLang predict package (this package) and its associated models is licensed under the GPL-3.0 License.
+The MusicLang predict package (this package) is licensed under the GPL-3.0 License.
+
+However please note that specific licenses applies to each models. If you would like to use one of our model in your product or a custom one, please
+contact [us](mailto:fgardin.pro@gmail.com). We are looking forward to hearing from you !
+
 The MusicLang base language (musiclang package) is licensed under the BSD 3-Clause License.
