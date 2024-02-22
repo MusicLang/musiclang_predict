@@ -10,8 +10,7 @@ class MusicLangBPETokenizer:
         self.pretokenizer = MusicLangTokenizer(pretokenizer_path)
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
 
-
-    def tokens_to_bytes(self, tokens: list[str]) -> str:
+    def tokens_to_bytes(self, tokens):
         """
         Convert a list of tokens to a string of bytes.
         :param tokens:
@@ -19,7 +18,7 @@ class MusicLangBPETokenizer:
         """
         return self.pretokenizer.tokens_to_bytes(tokens)
 
-    def __call__(self, score, **kwargs) -> list[str]:
+    def __call__(self, score, **kwargs):
         """
         Tokenize the input text.
         :param text: input text.
@@ -30,12 +29,12 @@ class MusicLangBPETokenizer:
 
         return self.tokenizer(bytes_, **kwargs).input_ids
 
-    def ids_to_text(self, ids: list[int]) -> list[str]:
+    def ids_to_text(self, ids):
         bytes_ = self.tokenizer.decode(ids).replace(' ', '')
         text = self.pretokenizer.bytes_to_tokens(bytes_)
         return text
 
-    def untokenize(self, ids: list[int]) -> str:
+    def untokenize(self, ids):
         """
         Convert a list of tokens to a string of bytes.
         :param tokens:
