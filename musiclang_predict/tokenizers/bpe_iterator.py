@@ -21,7 +21,7 @@ class BPEIterator:
         self.control_tokens = control_tokens
         self.__iter_count = 0
 
-    def load_file(self, path) -> list[str]:
+    def load_file(self, path):
         """
         Load a MIDI file and convert it to its byte representation.
 
@@ -41,7 +41,7 @@ class BPEIterator:
         bytes_ = [b for b in bytes_ if len(b) > 0]
         return bytes_
 
-    def __len__(self) -> int:
+    def __len__(self):
         """
         Return the number of files in the training corpus.
 
@@ -49,7 +49,7 @@ class BPEIterator:
         """
         return len(self.files_paths)
 
-    def __getitem__(self, idx: int) -> list[str]:
+    def __getitem__(self, idx: int):
         """
         Convert the ``idx``th file to its byte representation.
 
@@ -61,7 +61,7 @@ class BPEIterator:
     def __iter__(self):  # noqa:D105
         return self
 
-    def __next__(self) -> list[str]:  # noqa:D105
+    def __next__(self) :  # noqa:D105
         if self.__iter_count >= len(self):
             self.__iter_count = 0
             raise StopIteration
@@ -69,7 +69,7 @@ class BPEIterator:
         self.__iter_count += 1
         return self[self.__iter_count - 1]
 
-    def __str__(self) -> str:
+    def __str__(self):
         """
         Return the ``str`` representation of the iterator.
 

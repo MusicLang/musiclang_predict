@@ -94,7 +94,6 @@ def predict_with_fixed_instruments_no_prompt(instruments, chord_duration, model,
     inputs = []
     score = None
     for idx, chord in enumerate(chords):
-        # FIXME : New chord not possible, to fix with next tokenizer
         inputs += tokenizer.tokens_to_ids(tokenizer.tokenize_chord(chord.set_duration(chord_duration)))
         if tokenizer.dict['options'].get('next_chord_token', False) and idx < len(chords) - 1:
             inputs += tokenizer.tokens_to_ids(tokenizer.tokenize_next_chord(chords[idx + 1].set_duration(chord_duration)))
@@ -233,18 +232,18 @@ def model_pred_one_shot(inputs, nb, stop_words_ids, model, tokenizer, chord_dura
 
     # Correct inputs
     score = tokenizer.ids_to_score(inputs[:-1])  # Remove stop token
-    score = score.arrange_chords_duration(chord_duration)
-    drums = score.get_instrument_names(['drums_0'])
-    score_without_drums = score.normalize_instruments().remove_drums()
-
-    if len(score_without_drums.instruments) > 0:
-        score = score_without_drums
-        fixed_parts = extract_max_density_instruments(score)
-        #score = create_counterpoint_on_score(score, fixed_parts=fixed_parts)
-        # Reproject the drums
-        if len(drums.instruments) > 0:
-            score = score.project_on_score(drums, voice_leading=False, keep_score=True)
-    score = score.remove_silenced_instruments()
+    # score = score.arrange_chords_duration(chord_duration)
+    # drums = score.get_instrument_names(['drums_0'])
+    # score_without_drums = score.normalize_instruments().remove_drums()
+    #
+    # if len(score_without_drums.instruments) > 0:
+    #     score = score_without_drums
+    #     fixed_parts = extract_max_density_instruments(score)
+    #     #score = create_counterpoint_on_score(score, fixed_parts=fixed_parts)
+    #     # Reproject the drums
+    #     if len(drums.instruments) > 0:
+    #         score = score.project_on_score(drums, voice_leading=False, keep_score=True)
+    # score = score.remove_silenced_instruments()
 
     inputs = tokenizer.tokenize_to_ids(score, include_end=False)
     return score, inputs
