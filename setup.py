@@ -2,20 +2,37 @@ import setuptools
 from setuptools import setup, Extension, find_packages
 from setuptools.command.install import install
 from setuptools.command.build_ext import build_ext
+from setuptools.command.develop import develop
+from setuptools.command.egg_info import egg_info
 import subprocess
 import os
 
+
+
+def custom_command():
+    subprocess.check_call(['make', '-C', 'musiclang_predict/c/'])
 # Define the C extension
 class CustomInstall(install):
     """Custom build command that runs a Makefile."""
 
     def run(self):
-        # Check if we're on Windows
-        # Run the Makefile
-        print('is fucking called')
-        subprocess.check_call(['make', '-C', 'musiclang_predict/c/'])
+        print('is called')
+        custom_command()
         # Call the superclass methods to handle Python extension building, if any
         install.run(self)
+
+class CustomDevelopCommand(develop):
+    def run(self):
+        print('is called dev')
+        custom_command()
+        develop.run(self)
+
+class CustomEggInfoCommand(egg_info):
+    def run(self):
+        print('is called egg')
+        custom_command()
+        egg_info.run(self)
+
 
 module = Extension('musiclang_predict.c',
                    sources=['musiclang_predict/c/run.c'],
@@ -33,7 +50,10 @@ setuptools.setup(
     author_email="fgardin.pro@gmail.com",
     description=("Controllable symbolic music generation with generative AI"
                 ),
-    cmdclass={'install': CustomInstall},
+    cmdclass={'install': CustomInstall,
+              'develop': CustomDevelopCommand,
+              'egg_info': CustomEggInfoCommand
+              },
     ext_modules=[module],
     long_description=long_description,
     long_description_content_type="text/markdown",
