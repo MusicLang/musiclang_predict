@@ -46,7 +46,6 @@ class MusicLangPredictor:
             stop_char=STOP_CHAR)
 
         # Untokenize to score
-        print(generated_text)
         score = self.pretokenizer.untokenize_from_bytes(generated_text)
         return score
 
