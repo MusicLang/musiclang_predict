@@ -27,7 +27,7 @@ class MusicLangPredictor:
         self.pretokenizer = MusicLangTokenizer(self.path)
         self._nb_tokens_chord = get_nb_tokens_chord(self.pretokenizer)
 
-    def predict(self, score=None, nb_tokens: int = 256, temperature=0.95, topp=1.0, rng_seed=0):
+    def predict(self, score=None, nb_tokens: int = 256, temperature=0.9, topp=1.0, rng_seed=0):
 
         if score is not None:
             # Tokenize the score to bytes
@@ -60,7 +60,7 @@ class MusicLangPredictor:
     def chord_to_tokens(self, chord):
         return self.pretokenizer.tokenize_to_bytes(chord, self.pretokenizer)[1:self.nb_tokens_chord]
 
-    def predict_chords(self, chords: str, time_signature=(4, 4), score=None, nb_tokens: int = 4096, temperature=0.95, topp=1.0, rng_seed=0):
+    def predict_chords(self, chords: str, time_signature=(4, 4), score=None, nb_tokens: int = 4096, temperature=0.9, topp=1.0, rng_seed=0):
 
         chord_duration = self.ts_to_duration(time_signature)
         chords = Score.from_chord_repr(chords)
