@@ -34,7 +34,11 @@ class MusicLangBPETokenizer:
         text = self.pretokenizer.bytes_to_tokens(bytes_)
         return text
 
+
     def untokenize(self, ids):
+        return self.ids_to_score(ids)
+
+    def ids_to_score(self, ids):
         """
         Convert a list of tokens to a string of bytes.
         :param tokens:

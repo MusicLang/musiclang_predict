@@ -500,9 +500,11 @@ class MusicLangTokenizer:
 
     def bytes_to_tokens(self, bytes, to_str=True):
         ids = [ord(b) - BASE_CHAR_ID for b in bytes]
+        ids = [id for id in ids if id >= 0]
         result = self.ids_to_tokens(ids)
         if to_str:
             return " ".join(result)
+        return result
 
     def save(self, filepath):
         with open(filepath, 'w') as f:
@@ -583,6 +585,15 @@ class MusicLangTokenizer:
             return 'high'
         else:
             return 'very_high'
+
+    def tokenize_to_bytes(self, score, as_one_str=True):
+        tokens = self.tokenize(score)
+        return self.tokens_to_bytes(tokens, as_one_str=as_one_str)
+
+    def untokenize_from_bytes(self, bytes):
+        tokens = self.bytes_to_tokens(bytes, to_str=False)
+        return self.untokenize(tokens)
+
 
     def tokenize(self, score, only_chords=False, for_prompt=False):
         if self.dict['options'].get('random_instrument_permutation', False):
