@@ -45,7 +45,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setuptools.setup(
     name="musiclang-predict",
-    version="1.0.0",
+    version="1.1.0",
     author="Florian GARDIN",
     author_email="fgardin.pro@gmail.com",
     description=("Controllable symbolic music generation with generative AI"
