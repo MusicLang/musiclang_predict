@@ -76,7 +76,8 @@ setuptools.setup(
             "accelerate"
                       ],
     packages=setuptools.find_packages(include='*'),
-    package_data={'musiclang_predict': ['c/*.h', 'c/*.so', 'c/*.dll']},
+    package_data={'musiclang_predict': ['c/*.h', 'c/*.so', 'c/*.dll', 'corpus/*.mid'],
+                  },
     include_package_data=True,
     python_requires=">=3.6",
 )

@@ -10,13 +10,14 @@ from musiclang_predict import MusicLangTokenizer
 STOP_CHAR = None
 CHORD_CHANGE_CHAR = "_"
 
-
-
 TEST_CHORD = (I % I.M)
 
 
 def get_nb_tokens_chord(tokenizer):
     return len(tokenizer.tokenize_to_bytes(TEST_CHORD))
+
+MIDI_EXTENSIONS = ['mid', 'midi', 'MID', 'MIDI']
+XML_EXTENSIONS = ['xml', 'mxl', 'musicxml', 'XML', 'MXL', 'MUSICXML']
 
 class MusicLangPredictor:
 
@@ -27,11 +28,42 @@ class MusicLangPredictor:
         self.pretokenizer = MusicLangTokenizer(self.path)
         self._nb_tokens_chord = get_nb_tokens_chord(self.pretokenizer)
 
-    def predict(self, score=None, nb_tokens: int = 256, temperature=0.9, topp=1.0, rng_seed=0):
+    def parse_score(self, score, prompt_chord_range=None):
+        # Tokenize the score to bytes
 
+        if isinstance(score, str) and score.split('.')[-1] in MIDI_EXTENSIONS:
+            # Load score
+            from musiclang import Score
+            score = Score.from_midi(score, chord_range=prompt_chord_range)
+        elif isinstance(score, str) and score.split('.')[-1] in XML_EXTENSIONS:
+            # Load score
+            from musiclang import Score
+            if prompt_chord_range is not None:
+                raise ValueError("Sorry ... Chord range is not supported yet for XML files, convert it to midi first")
+            score = Score.from_xml(score)
+        score = self.pretokenizer.tokenize_to_bytes(score, self.pretokenizer) + CHORD_CHANGE_CHAR
+        return score
+
+    def predict(self, score=None, prompt_chord_range=None, nb_tokens: int = 256, temperature=0.9, topp=1.0, rng_seed=0):
+        """
+        Generate a score from a prompt
+        :param score: (Optional) MusicLang Score, midi or xml file, default None
+        The prompt used to continue the generation on
+        :param prompt_chord_range: (Optional) tuple (int, int), default None
+        Chord range to use for the prompt
+        :param nb_tokens: (Optional) int, default 256
+        Number of tokens to generate
+        :param temperature: (Optional) float, default 0.9
+        Temperature to use for the generation
+        :param topp: (Optional) float, default 1.0
+        Top-p to use for the generation
+        :param rng_seed: (Optional) int, default 0
+        Random seed to use for the generation. Use 0 for no seed
+        :return: MusicLang Score
+        The generated score
+        """
         if score is not None:
-            # Tokenize the score to bytes
-            score = self.pretokenizer.tokenize_to_bytes(score, self.pretokenizer)
+            score = self.parse_score(score, prompt_chord_range)
 
         generated_text = run_transformer_model(
             checkpoint_path=self.model_path,
@@ -60,7 +92,7 @@ class MusicLangPredictor:
     def chord_to_tokens(self, chord):
         return self.pretokenizer.tokenize_to_bytes(chord, self.pretokenizer)[1:self.nb_tokens_chord]
 
-    def predict_chords(self, chords: str, time_signature=(4, 4), score=None, nb_tokens: int = 4096, temperature=0.9, topp=1.0, rng_seed=0):
+    def predict_chords(self, chords: str, time_signature=(4, 4), score=None, prompt_chord_range=None, nb_tokens: int = 4096, temperature=0.9, topp=1.0, rng_seed=0):
 
         chord_duration = self.ts_to_duration(time_signature)
         chords = Score.from_chord_repr(chords)
