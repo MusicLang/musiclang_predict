@@ -96,7 +96,7 @@ Let's continue some Bach music with a chord progression he could have used :
 from musiclang_predict import MusicLangPredictor
 from musiclang_predict import corpus
 
-song_name = 'bach_847'
+song_name = 'bach_847' # corpus.list_corpus() to get the list of available songs
 chord_progression = "Cm C7/E Fm F#dim G7 Cm"
 nb_tokens = 1024 
 temperature = 0.8 
