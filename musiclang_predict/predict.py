@@ -100,7 +100,7 @@ class MusicLangPredictor:
         chord_tokens = [self.chord_to_tokens(chord) for chord in chords]
 
         if score is not None:
-            score = self.pretokenizer.tokenize_to_bytes(score, self.pretokenizer)
+            score = self.parse_score(score, prompt_chord_range)
         else:
             score = CHORD_CHANGE_CHAR
 
