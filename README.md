@@ -28,7 +28,7 @@ I am more serious about it
 Install the musiclang-predict package :
 
 ```bash
-!pip install musiclang_predict
+pip install musiclang_predict
 ```
 
 Then open your favourite notebook and start generating music in a few lines :
