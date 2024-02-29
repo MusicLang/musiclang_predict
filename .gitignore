@@ -9,7 +9,11 @@
 .pytest_cache/
 *.ogg
 *.flac
+*.so
+musiclang_predict.egg-info/*
+main.py
 *.mid
+!musiclang_predict/corpus/*.mid
 *.midi
 venv/
 **.DS_Store
