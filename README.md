@@ -28,7 +28,7 @@ I am more serious about it
 Install the musiclang-predict package :
 
 ```bash
-!pip install git+https://github.com/musiclang/musiclang_predict.git
+!pip install musiclang_predict
 ```
 
 Then open your favourite notebook and start generating music in a few lines :
@@ -129,12 +129,16 @@ We are working on a lot of cool features, some are already encoded in the model 
 - An integration into a DAW as a plugin
 - Some specialized smaller models depending on our user's needs
 
-What is this model ? 
+How does that work ? 
 ---------------------
 
 If you want to learn more about how we are moving toward symbolic music generation, go to our [technical blog](https://musiclang.github.io/).
 The tokenization, the model are described in great details. 
-To have a quick overview, we are using a transformer model, trained on a large dataset of midi files (The CC0 [LAKH](https://colinraffel.com/projects/lmd/).
+
+We are using a LLAMA2 architecture (many thanks to Andrej Karpathy awesome [llama2.c](https://github.com/karpathy/llama2.c)), trained on a large dataset of midi files (The CC0 licensed [LAKH](https://colinraffel.com/projects/lmd/)).
+We heavily rely on preprocessing the midi files to get an enriched tokenization that describe chords & scale for each bar.
+The is also helpful for normalizing melodies relative to the current chord/scale.
+
 
 Contributing & Contact us
 -------------------------
