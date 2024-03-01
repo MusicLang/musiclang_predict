@@ -3,7 +3,7 @@
 <h1 align="center" weight='300' >MusicLang Predict, your controllable music copilot. </h1>
 
 <h4 align="center">
-  <a href="https://huggingface.co/musiclang/musiclang-4k"> 🤗 HuggingFace</a> |
+  <a href="https://huggingface.co/musiclang/musiclang-v2"> 🤗 HuggingFace</a> |
   <a href="https://discord.gg/2g7eA5vP">Discord</a> |
   <a href="https://www.linkedin.com/company/musiclang/">Follow us!</a>
 </h4>
@@ -174,7 +174,7 @@ If you are interested in this project, open an issue, a pull request, or even [c
 Whether you're cp,tributing code or just saying hello, we'd love to hear the work you are creating wxith MusicLang. Here's how you can reach out to us: 
 * Join our Discord to ask your questions and get support: [Discord](https://discord.gg/2g7eA5vP)
 * Follow us on [Linkedin](https://www.linkedin.com/company/musiclang/)
-* Add you star on [GitHub](https://github.com/musiclang/musiclang_predict?tab=readme-ov-file) or [HuggingFace](https://huggingface.co/musiclang/musiclang-4k)
+* Add your star on [GitHub](https://github.com/musiclang/musiclang_predict?tab=readme-ov-file) or [HuggingFace](https://huggingface.co/musiclang/musiclang-4k)
 
 ## License
 <br/>
