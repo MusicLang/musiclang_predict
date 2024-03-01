@@ -171,7 +171,7 @@ The is also helpful for normalizing melodies relative to the current chord/scale
 We are looking for contributors to help us improve the model, the tokenization, the performances and the documentation.
 If you are interested in this project, open an issue, a pull request, or even [contact us directly](https://www.musiclang.io/contact).
 
-Whether you're cp,tributing code or just saying hello, we'd love to hear the work you are creating wxith MusicLang. Here's how you can reach out to us: 
+Whether you're cp,tributing code or just saying hello, we'd love to hear the work you are creating with MusicLang. Here's how you can reach out to us: 
 * Join our Discord to ask your questions and get support: [Discord](https://discord.gg/2g7eA5vP)
 * Follow us on [Linkedin](https://www.linkedin.com/company/musiclang/)
 * Add your star on [GitHub](https://github.com/musiclang/musiclang_predict?tab=readme-ov-file) or [HuggingFace](https://huggingface.co/musiclang/musiclang-4k)
@@ -180,7 +180,7 @@ Whether you're cp,tributing code or just saying hello, we'd love to hear the wor
 <br/>
 
 MusicLang Predict (This package) is licensed under the GPL-3.0 License.
-However please note that specific licenses applies to our models. If you would like to use the model in your product, please
+However please note that specific licenses applies to our models. If you would like to use the model in your commercial product, please
 [contact us](https://www.musiclang.io/contact). We are looking forward to hearing from you !
 
 The MusicLang base language package on which the model rely ([musiclang package](https://github.com/musiclang/musiclang)) is licensed under the BSD 3-Clause License.
