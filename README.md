@@ -23,12 +23,12 @@
     - [Try in Colab 📙](#try-in-colab-📙)
     - [Install MusicLang ♫](#install-musiclang-♫)
     - [Examples 🎹](#examples-🎹)
-        - [Generate your first music 🕺 ](#1-generate-your-first-music-🕺)
-        - [Controlling chord progression generation 🪩 ](#2-controlling-chord-progression-generation)
-        - [Generation from an existing music 💃 ](#3-generation-from-an-existing-music)
+        - [`1.` Generate your first music 🕺 ](#1-generate-your-first-music)
+        - [`2.` Controlling chord progression generation 🪩 ](#2-controlling-chord-progression-generation)
+        - [`3.` Generation from an existing music 💃 ](#3-generation-from-an-existing-music)
 - [How does MusicLang work ? 🔬 ](#how-does-musiclang-work--🔬)
-    - [Annotate chords and scales progression of MIDIs using MusicLang analysis ](#1-annotate-chords-and-scales-progression-of-midis-using-musiclang-analysis)
-    - [The MusicLang tokenizer : Toward controllable symbolic music generation ](#2-the-musiclang-tokenizer--toward-controllable-symbolic-music-generation)
+    - [`1.` Annotate chords and scales progression of MIDIs using MusicLang analysis ](#1-annotate-chords-and-scales-progression-of-midis-using-musiclang-analysis)
+    - [`2.` The MusicLang tokenizer : Toward controllable symbolic music generation ](#2-the-musiclang-tokenizer--toward-controllable-symbolic-music-generation)
 - [Contributing & spread the word 🤝 ](#contributing--spread-the-word-🤝)
 - [License ](#license)
 
@@ -53,7 +53,7 @@ pip install musiclang_predict
 ```
 ## Examples 🎹
 
-### 1. Generate your first music 🕺
+### `1.` Generate your first music
 <br/>
 
 Open your favourite notebook and start generating music in a few lines :
@@ -76,7 +76,7 @@ score = ml.predict(
 score.to_midi('test.mid') # Open that file in your favourite DAW, score editor or even in VLC
 ```
 
-### 2. Controlling chord progression generation 🪩
+### `2.` Controlling chord progression generation
 <br/>
 
 You had a specific harmony in mind, right ? MusicLang allows fine control over the chord progression of the generated music.
@@ -109,7 +109,7 @@ score.to_midi('test.mid', tempo=120, time_signature=(4, 4))
 
 > Disclaimer : The chord progression is not guaranteed to be exactly the same as the one you specified. It's a generative model after all. This may occur more frequently when using an exotic chord progression or setting a high temperature.
 
-### 3. Generation from an existing music 💃
+### `3.` Generation from an existing music
 <br/>
 
 What if I want to use MusicLang from an existing music ? Don't worry, we got you covered. You can use your music as a template to generate new music.
@@ -156,8 +156,8 @@ We are working on a lot of cool features, some are already encoded in the model 
 
 If you want to learn more about how we are moving toward symbolic music generation, go to our [technical blog](https://musiclang.github.io/). The tokenization, the model are described in great details: 
 
-#### 1. [Annotate chords and scales progression of MIDIs using MusicLang analysis](https://musiclang.github.io/chord_parsing/) 
-#### 2. [The MusicLang tokenizer : Toward controllable symbolic music generation](https://musiclang.github.io/tokenizer/)
+#### `1.` [Annotate chords and scales progression of MIDIs using MusicLang analysis](https://musiclang.github.io/chord_parsing/) 
+#### `2.` [The MusicLang tokenizer : Toward controllable symbolic music generation](https://musiclang.github.io/tokenizer/)
 <br/> 
 
 We are using a LLAMA2 architecture (many thanks to Andrej Karpathy's awesome [llama2.c](https://github.com/karpathy/llama2.c)), trained on a large dataset of midi files (The CC0 licensed [LAKH](https://colinraffel.com/projects/lmd/)).
