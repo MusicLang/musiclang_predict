@@ -14,7 +14,7 @@
 <h4>☞ You need to run it fast on your laptop without a gpu ?</h4> 
 
 <br/>
-<h2 align="center"><b>MusicLang” is the contraction of “Music” & “language”: we bring advanced controllability features over music generation by manipulating symbolic music.</b></h2>
+<h2 align="center"><b>MusicLang is the contraction of “Music” & “language”: we bring advanced controllability features over music generation by manipulating symbolic music.</b></h2>
 <br/>
 
 <summary><kbd>Table of contents</kbd></summary>
