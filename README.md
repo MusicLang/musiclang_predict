@@ -20,7 +20,7 @@
 <summary><kbd>Table of contents</kbd></summary>
 
 - <a href="#quickstart">Quickstart 🚀</a>
-    - <a href="#colab">Try in Colab 📙</a>
+    - <a href="#colab">Try it quickly 📙</a>
     - <a href="#install">Install MusicLang ♫</a>
 - <a href="#examples">Examples 🎹</a>
     - <a href="#example_1">1. Generate your first music 🕺</a>
@@ -34,7 +34,7 @@
 - <a href="#license">License ⚖️</a>
 
 <h1 id="quickstart">Quickstart 🚀</h1>
-<h2 id="colab">Try in Colab 📙</h2>
+<h2 id="colab">Try it quickly 📙</h2>
 <br/>
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1MA2mek826c05BjbWk2nRkVv2rW7kIU_S?usp=sharing)
