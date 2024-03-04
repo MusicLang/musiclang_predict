@@ -38,6 +38,7 @@
 <br/>
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1MA2mek826c05BjbWk2nRkVv2rW7kIU_S?usp=sharing)
+[![Open in HF Space](https://huggingface.co/spaces)](https://huggingface.co/spaces/musiclang/musiclang-predict)
 
 Go to our Colab, we have a lot of cool examples, from generating creative musical ideas to continuing a song with a specified chord progression.
 <br/>
