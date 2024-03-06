@@ -40,7 +40,7 @@
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1MA2mek826c05BjbWk2nRkVv2rW7kIU_S?usp=sharing)
 [![Open in Spaces](https://huggingface.co/datasets/huggingface/badges/resolve/main/open-in-hf-spaces-sm.svg)](https://huggingface.co/spaces/musiclang/musiclang-predict)
 
-Go to our Colab, or to our huggingface space, we have a lot of cool examples, from generating creative musical ideas to continuing a song with a specified chord progression.
+Go to our <a href="https://colab.research.google.com/drive/1MA2mek826c05BjbWk2nRkVv2rW7kIU_S?usp=sharing">♾Colab</a>, or to our <a href="https://huggingface.co/spaces/musiclang/musiclang-predict">🤗HuggingFace space</a>, we have a lot of cool examples, from generating creative musical ideas to continuing a song with a specified chord progression.
 <br/>
 
 <h2 id="install">Install MusicLang ♫</h2> 
