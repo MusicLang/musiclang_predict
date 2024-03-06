@@ -40,7 +40,7 @@
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1MA2mek826c05BjbWk2nRkVv2rW7kIU_S?usp=sharing)
 [![Open in Spaces](https://huggingface.co/datasets/huggingface/badges/resolve/main/open-in-hf-spaces-sm.svg)](https://huggingface.co/spaces/musiclang/musiclang-predict)
 
-Go to our Colab, or to our Hugging Face space, we have a lot of cool examples, from generating creative musical ideas to continuing a song with a specified chord progression.
+Go to our <a href="https://colab.research.google.com/drive/1MA2mek826c05BjbWk2nRkVv2rW7kIU_S?usp=sharing">♾Colab</a>, or to our <a href="https://huggingface.co/spaces/musiclang/musiclang-predict">🤗HuggingFace space</a>, we have a lot of cool examples, from generating creative musical ideas to continuing a song with a specified chord progression.
 <br/>
 
 <h2 id="install">Install MusicLang ♫</h2> 
@@ -172,8 +172,8 @@ The is also helpful for normalizing melodies relative to the current chord/scale
 We are looking for contributors to help us improve the model, the tokenization, the performances and the documentation.
 If you are interested in this project, open an issue, a pull request, or even [contact us directly](https://www.musiclang.io/contact).
 
-Whether you're cp,tributing code or just saying hello, we'd love to hear the work you are creating with MusicLang. Here's how you can reach out to us: 
-* Join our Discord to ask your questions and get support: [Discord](https://discord.gg/2g7eA5vP)
+Whether you're contributing code or just saying hello, we'd love to hear about the work you are creating with MusicLang. Here's how you can reach out to us: 
+* Join our [Discord](https://discord.gg/2g7eA5vP) to ask your questions and get support
 * Follow us on [Linkedin](https://www.linkedin.com/company/musiclang/)
 * Add your star on [GitHub](https://github.com/musiclang/musiclang_predict?tab=readme-ov-file) or [HuggingFace](https://huggingface.co/musiclang/musiclang-4k)
 
