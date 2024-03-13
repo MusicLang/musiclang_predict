@@ -65,11 +65,11 @@ module = Extension('musiclang_predict.c',
 
 from pathlib import Path
 this_directory = Path(__file__).parent
-long_description = (this_directory / "README.md").read_text()
+long_description = (this_directory / "README.md").read_text(encoding='utf-8')
 
 setuptools.setup(
     name="musiclang-predict",
-    version="1.1.5",
+    version="1.1.8",
     author="Florian GARDIN",
     author_email="fgardin.pro@gmail.com",
     description=("Controllable symbolic music generation with generative AI"
@@ -99,7 +99,7 @@ setuptools.setup(
             "accelerate"
                       ],
     packages=setuptools.find_packages(include='*'),
-    package_data={'musiclang_predict': ['c/*.h', 'c/*.so', 'c/*.dll', 'c/Makefile', 'corpus/*.mid'],
+    package_data={'musiclang_predict': ['c/*.h', 'c/*.c', 'c/*.so', 'c/*.dll', 'c/Makefile', 'corpus/*.mid'],
                   },
     include_package_data=True,
     python_requires=">=3.6",
