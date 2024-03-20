@@ -13,8 +13,8 @@ CFLAGS = -Ofast -fPIC -shared
 TARGET_LIB_LINUX = librun.so
 TARGET_LIB_WIN = run.dll
 
-# Source files
-SRC = run.c
+# Source files - Automatically finds all .c files
+SRC = $(wildcard *.c)
 
 # Object files
 OBJ = $(SRC:.c=.o)
@@ -40,7 +40,7 @@ $(TARGET_LIB): $(SRC)
 
 # Rule for cleaning up
 clean:
-	rm -f $(TARGET_LIB)
+	rm -f $(TARGET_LIB) $(OBJ)
 
 # Rule for installing (optional, might require additional actions for Python usage)
 install:
