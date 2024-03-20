@@ -244,7 +244,6 @@ class MusicLangPredictor:
                 stop_char=self.CHORD_CHANGE_CHAR)
 
             score = generated_text
-            print(score)
             attention_already_generated = True
 
         score = self.pretokenizer.untokenize_from_bytes(score)
