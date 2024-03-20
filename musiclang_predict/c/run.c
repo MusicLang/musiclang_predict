@@ -2,11 +2,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h> // Ensure this is included for the bool type
 #include <ctype.h>
 #include <time.h>
 #include <math.h>
 #include <string.h>
 #include <fcntl.h>
+#include "run.h"
 #if defined _WIN32
     #include "win.h"
 #else
@@ -16,63 +18,7 @@
 // ----------------------------------------------------------------------------
 // Transformer model
 
-typedef struct {
-    int dim; // transformer dimension
-    int hidden_dim; // for ffn layers
-    int n_layers; // number of layers
-    int n_heads; // number of query heads
-    int n_kv_heads; // number of key/value heads (can be < query heads because of multiquery)
-    int vocab_size; // vocabulary size, usually 256 (byte-level)
-    int seq_len; // max sequence length
-} Config;
 
-typedef struct {
-    // token embedding table
-    float* token_embedding_table;    // (vocab_size, dim)
-    // weights for rmsnorms
-    float* rms_att_weight; // (layer, dim) rmsnorm weights
-    float* rms_ffn_weight; // (layer, dim)
-    // weights for matmuls. note dim == n_heads * head_size
-    float* wq; // (layer, dim, n_heads * head_size)
-    float* wk; // (layer, dim, n_kv_heads * head_size)
-    float* wv; // (layer, dim, n_kv_heads * head_size)
-    float* wo; // (layer, n_heads * head_size, dim)
-    // weights for ffn
-    float* w1; // (layer, hidden_dim, dim)
-    float* w2; // (layer, dim, hidden_dim)
-    float* w3; // (layer, hidden_dim, dim)
-    // final rmsnorm
-    float* rms_final_weight; // (dim,)
-    // (optional) classifier weights for the logits, on the last layer
-    float* wcls;
-} TransformerWeights;
-
-typedef struct {
-    // current wave of activations
-    float *x; // activation at current time stamp (dim,)
-    float *xb; // same, but inside a residual branch (dim,)
-    float *xb2; // an additional buffer just for convenience (dim,)
-    float *hb; // buffer for hidden dimension in the ffn (hidden_dim,)
-    float *hb2; // buffer for hidden dimension in the ffn (hidden_dim,)
-    float *q; // query (dim,)
-    float *k; // key (dim,)
-    float *v; // value (dim,)
-    float *att; // buffer for scores/attention values (n_heads, seq_len)
-    float *logits; // output logits
-    // kv cache
-    float* key_cache;   // (layer, seq_len, dim)
-    float* value_cache; // (layer, seq_len, dim)
-} RunState;
-
-typedef struct {
-    Config config; // the hyperparameters of the architecture (the blueprint)
-    TransformerWeights weights; // the weights of the model
-    RunState state; // buffers for the "wave" of activations in the forward pass
-    // some more state needed to properly clean up the memory mapping (sigh)
-    int fd; // file descriptor for memory mapping
-    float* data; // memory mapped data pointer
-    ssize_t file_size; // size of the checkpoint file in bytes
-} Transformer;
 
 void malloc_run_state(RunState* s, Config* p) {
     // we calloc instead of malloc to keep valgrind happy
@@ -364,19 +310,6 @@ float* forward(Transformer* transformer, int token, int pos) {
 // ----------------------------------------------------------------------------
 // The Byte Pair Encoding (BPE) Tokenizer that translates strings <-> tokens
 
-typedef struct {
-    char *str;
-    int id;
-} TokenIndex;
-
-typedef struct {
-    char** vocab;
-    float* vocab_scores;
-    TokenIndex *sorted_vocab;
-    int vocab_size;
-    unsigned int max_token_length;
-    unsigned char byte_pieces[512]; // stores all single-byte strings
-} Tokenizer;
 
 int compare_tokens(const void *a, const void *b) {
     return strcmp(((TokenIndex*)a)->str, ((TokenIndex*)b)->str);
@@ -574,18 +507,6 @@ void encode(Tokenizer* t, char *text, int8_t bos, int8_t eos, int *tokens, int *
 // The Sampler, which takes logits and returns a sampled token
 // sampling can be done in a few ways: greedy argmax, sampling, top-p sampling
 
-typedef struct {
-    float prob;
-    int index;
-} ProbIndex; // struct used when sorting probabilities during top-p sampling
-
-typedef struct {
-    int vocab_size;
-    ProbIndex* probindex; // buffer used in top-p sampling
-    float temperature;
-    float topp;
-    unsigned long long rng_state;
-} Sampler;
 
 int sample_argmax(float* probabilities, int n) {
     // return the index that has the highest probability
@@ -726,12 +647,15 @@ long time_in_ms() {
 // ----------------------------------------------------------------------------
 // generation loop
 
-char* generate(Transformer *transformer, Tokenizer *tokenizer, Sampler *sampler, char *prompt, int steps, char stop_char) {
+
+// Update to use attention_already_generated_index
+char* generate(Transformer *transformer, Tokenizer *tokenizer, Sampler *sampler, char *prompt, char *post_prompt, int steps, char stop_char, bool attention_already_generated) {
     // generate a sequence of tokens from the transformer, using the sampler
     char *result = malloc(1); // Start with an empty string
     size_t result_len = 0; // Keep track of the length
     char *empty_prompt = "";
     if (prompt == NULL) { prompt = empty_prompt; }
+    if (post_prompt == NULL) { post_prompt = empty_prompt; }
 
     // encode the (string) prompt into tokens sequence
     int num_prompt_tokens = 0;
@@ -743,13 +667,46 @@ char* generate(Transformer *transformer, Tokenizer *tokenizer, Sampler *sampler,
         exit(EXIT_FAILURE);
     }
 
+    // Encode post prompt separately without BOS
+    int num_post_prompt_tokens = 0;
+    int* post_prompt_tokens = (int*)malloc((strlen(post_prompt)+2) * sizeof(int)); // +2 for '\0', ?EOS
+    encode(tokenizer, post_prompt, 0, 0, post_prompt_tokens, &num_post_prompt_tokens);
+    if (num_post_prompt_tokens  > 0) {
+        // Update prompt_tokens
+        prompt_tokens = realloc(prompt_tokens, (num_prompt_tokens + num_post_prompt_tokens) * sizeof(int));
+        memcpy(prompt_tokens + num_prompt_tokens, post_prompt_tokens, num_post_prompt_tokens * sizeof(int));
+        num_prompt_tokens += num_post_prompt_tokens;
+    }
+
+
+    // Initialize start pos because we already calculated the attention for the prompt
+    int start_pos ;
+    int token;
+    if(attention_already_generated){
+        start_pos = num_prompt_tokens - 1;
+        // Update result and result_len
+        for (int i = 0; i < num_prompt_tokens - 1; i++) {
+            char* piece = decode(tokenizer, prompt_tokens[i], prompt_tokens[i + 1]);
+            size_t piece_len = strlen(piece);
+            result = realloc(result, result_len + piece_len + 1); // +1 for null terminator
+            memcpy(result + result_len, piece, piece_len);
+            result_len += piece_len;
+            result[result_len] = '\0'; // Ensure null-termination
+        }
+        token = prompt_tokens[num_prompt_tokens - 1];
+    } else {
+        start_pos = 0;
+        token = prompt_tokens[0]; // kick off with the first token in the prompt
+    }
+
     // start the main loop
     long start = 0;  // used to time our code, only initialized after first iteration
     int next;        // will store the next token in the sequence
-    int token = prompt_tokens[0]; // kick off with the first token in the prompt
+    //int token = prompt_tokens[0]; // kick off with the first token in the prompt
     int prompt_len = num_prompt_tokens - 1; // length of the prompt, excluding BOS
-    int pos = 0;     // position in the sequence
-    while (pos < steps) {
+    int pos = start_pos; // position in the sequence, excluding BOS
+    //fprintf(stderr, "pos %d steps %d start_pos %d \n", pos, steps, start_pos);
+    while (pos < steps + start_pos) {
 
         // forward the transformer to get logits for the next token
         float* logits = forward(transformer, token, pos);
@@ -767,6 +724,8 @@ char* generate(Transformer *transformer, Tokenizer *tokenizer, Sampler *sampler,
         // data-dependent terminating condition: the BOS (=1) token delimits sequences
         // Print prompt len, next, pos, stop_token
         if (next == 1) {
+            // Print
+            //fprintf(stderr, "Prompt len: %d, Next: %d, Pos: %d, Stop Token: %d\n", prompt_len, next, pos, stop_char);
              break;
           }
 
@@ -810,6 +769,8 @@ char* generate(Transformer *transformer, Tokenizer *tokenizer, Sampler *sampler,
     return result; // return the generated string
 }
 
+
+
 void read_stdin(const char* guide, char* buffer, size_t bufsize) {
     // read a line from stdin, up to but not including \n
     //printf("%s", guide);
@@ -844,30 +805,40 @@ void free_returned_string(char* str) {
     free(str);
 }
 
-char* run_model(char *checkpoint_path, char *tokenizer_path, char stop_char, float temperature, float topp, unsigned long long rng_seed, int steps, char *prompt, char *mode, char *system_prompt) {
-    // parameter validation/overrides (simplified for brevity)
+// Initializes a Transformer and returns a pointer to it
+Transformer* create_transformer(char* checkpoint_path) {
+    Transformer* transformer = malloc(sizeof(Transformer));
+    build_transformer(transformer, checkpoint_path);
+    return transformer;
+}
+
+// Frees a Transformer
+void free_transformer_external(Transformer* transformer) {
+    free_transformer(transformer);
+    free(transformer);
+}
+
+
+char* run_model(Transformer* transformer, bool attention_already_generated, char *tokenizer_path, char stop_char, float temperature, float topp, unsigned long long rng_seed, int steps, char *prompt, char *post_prompt, char *mode, char *system_prompt) {
+    // parameter validation/overrides
     if (rng_seed <= 0) rng_seed = (unsigned int)time(NULL);
     if (temperature < 0.0) temperature = 0.0;
-    if (topp < 0.0 || 1.0 < topp) topp = 0.9;
+    if (topp < 0.0 || topp > 1.0) topp = 0.9;
     if (steps < 0) steps = 0;
 
-    Transformer transformer;
-    build_transformer(&transformer, checkpoint_path);
+    //printf("running with temperature=%f, topp=%f, seed=%llu, steps=%d\n", temperature, topp, rng_seed, steps);
 
     Tokenizer tokenizer;
-    build_tokenizer(&tokenizer, tokenizer_path, transformer.config.vocab_size);
+    build_tokenizer(&tokenizer, tokenizer_path, transformer->config.vocab_size);
 
     Sampler sampler;
-    build_sampler(&sampler, transformer.config.vocab_size, temperature, topp, rng_seed);
+    build_sampler(&sampler, transformer->config.vocab_size, temperature, topp, rng_seed);
 
-    //printf("Prompt: %s\n", prompt);
-
-
-    char* generated_text = generate(&transformer, &tokenizer, &sampler, prompt, steps, stop_char);
+    char* generated_text = generate(transformer, &tokenizer, &sampler, prompt, post_prompt, steps, stop_char, attention_already_generated);
 
     free_sampler(&sampler);
     free_tokenizer(&tokenizer);
-    free_transformer(&transformer);
+    // Don't free transformer here
     return generated_text;
 }
 #endif

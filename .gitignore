@@ -30,3 +30,5 @@ documentation/_build/
 dist/
 documentation/auto_examples/
 *.ipynb
+main*.py
+build.sh
