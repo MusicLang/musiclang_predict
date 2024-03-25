@@ -30,6 +30,7 @@
 - <a href="#hdw">How does MusicLang work? 🔬</a>
     - <a href="#article_1">1. Annotate chords and scales progression of MIDIs using MusicLang analysis</a>
     - <a href="#article_2">2. The MusicLang tokenizer : Toward controllable symbolic music generation</a>
+    - <a href="#article_3">3. Examples of sound made with MusicLang ❤️</a>
 - <a href="#share">Contributing & spread the word 🤝</a>
 - <a href="#license">License ⚖️</a>
 
@@ -159,7 +160,8 @@ If you want to learn more about how we are moving toward symbolic music generati
 
 <h4 id="article_1"><a href="https://musiclang.github.io/chord_parsing/"> 1. Annotate chords and scales progression of MIDIs using MusicLang analysis</a></h4>
 <h4 id="article_2"><a href="https://musiclang.github.io/tokenizer/"> 2. The MusicLang tokenizer : Toward controllable symbolic music generation</a></h4>
-<br/> 
+<h4 id="article_3"><a href="https://musiclang.github.io/generations/"> 3. Examples of sound made with MusicLang ❤️</a></h4>
+<br/>
 
 We are using a LLAMA2 architecture (many thanks to Andrej Karpathy's awesome [llama2.c](https://github.com/karpathy/llama2.c)), trained on a large dataset of midi files (The CC0 licensed [LAKH](https://colinraffel.com/projects/lmd/)).
 We heavily rely on preprocessing the midi files to get an enriched tokenization that describe chords & scale for each bar.
