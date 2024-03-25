@@ -68,7 +68,7 @@ seed = 16  # change here to change result, or set to 0 to unset seed
 ml = MusicLangPredictor('musiclang/musiclang-v2') # Only available model for now
 
 score = ml.predict(
-    nb_tokens=nb_tokens,  # 1024 tokens ~ 25s of music (depending of the number of instruments generated)
+    nb_chords=4,  # Number of bars wanted (one chord = one bar)
     temperature=temperature,
     topp=top_p,
     rng_seed=seed # change here to change result, or set to 0 to unset seed
