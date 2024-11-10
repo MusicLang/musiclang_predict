@@ -4,7 +4,7 @@
 
 <h4 align="center">
   <a href="https://huggingface.co/musiclang/musiclang-v2"> 🤗 HuggingFace</a> |
-  <a href="https://discord.gg/2g7eA5vP">Discord</a> |
+  <a href="https://discord.gg/sR9BYeducZ">Discord</a> |
   <a href="https://www.linkedin.com/company/musiclang/">Follow us!</a>
 </h4>
 <br/>
@@ -175,7 +175,7 @@ We are looking for contributors to help us improve the model, the tokenization, 
 If you are interested in this project, open an issue, a pull request, or even [contact us directly](https://www.musiclang.io/contact).
 
 Whether you're contributing code or just saying hello, we'd love to hear about the work you are creating with MusicLang. Here's how you can reach out to us: 
-* Join our [Discord](https://discord.gg/2g7eA5vP) to ask your questions and get support
+* Join our [Discord](https://discord.gg/sR9BYeducZ) to ask your questions and get support
 * Follow us on [Linkedin](https://www.linkedin.com/company/musiclang/)
 * Add your star on [GitHub](https://github.com/musiclang/musiclang_predict?tab=readme-ov-file) or [HuggingFace](https://huggingface.co/musiclang/musiclang-4k)
 
