@@ -30,7 +30,7 @@ long_description = (this_directory / "README.md").read_text(encoding='utf-8')
 
 setuptools.setup(
     name="musiclang-predict",
-    version="1.2.0",
+    version="1.2.1",
     author="Florian GARDIN",
     author_email="fgardin.pro@gmail.com",
     description=("Controllable symbolic music generation with generative AI"
@@ -48,14 +48,23 @@ setuptools.setup(
     },
     classifiers=[
         "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
         "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
     ],
     install_requires=[
-            "musiclang>=0.25",
+            "musiclang>=0.26.1",
+            "numpy",
             "torch",
             "transformers",
             "tokenizers",
+            "huggingface_hub",
+            "joblib",
+            "tqdm",
             "torchtoolkit",
             "accelerate"
                       ],
@@ -63,5 +72,5 @@ setuptools.setup(
     package_data={'musiclang_predict': ['c/*.h', 'c/*.c', 'c/*.so', 'c/*.dll', 'c/Makefile', 'corpus/*.mid'],
                   },
     include_package_data=True,
-    python_requires=">=3.6",
+    python_requires=">=3.9",
 )

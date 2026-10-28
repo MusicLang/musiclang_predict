@@ -1,6 +1,10 @@
-musiclang>=0.23
+musiclang>=0.26.1
 sentencepiece
 torch
+numpy
+huggingface_hub
+joblib
+tqdm
 transformers
 tokenizers
 torchtoolkit
